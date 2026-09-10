@@ -1722,6 +1722,55 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 700;
 }
 
+/* ============================================================
+   QUICK MONEY ACTIONS
+   ============================================================ */
+.money-actions-card {
+  margin: 0 0 14px;
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+.money-actions-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:10px; }
+.money-actions-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+.money-actions-sub { font-size:11px; color:var(--text-tertiary); }
+.money-actions-form {
+  display:grid; grid-template-columns:1fr 1fr 1fr 120px auto; gap:6px; align-items:stretch;
+  padding:4px; background:rgba(0,0,0,0.30); border-radius:12px;
+}
+.money-actions-form select, .money-actions-form input {
+  min-width:0; width:100%; padding:9px 10px; border:0; outline:none;
+  background:rgba(255,255,255,0.04); color:var(--text-primary); border-radius:8px;
+  font:600 12px var(--font); color-scheme:dark;
+}
+.money-actions-form input { background:transparent; font-size:14px; }
+.money-actions-btn {
+  border:0; border-radius:9px; padding:0 14px; background:#6EE7B7; color:#04201A;
+  font:700 13px var(--font); cursor:pointer; white-space:nowrap;
+}
+.money-actions-btn:hover { filter:brightness(1.08); }
+.money-actions-hint { min-height:16px; margin-top:8px; font-size:11px; color:var(--text-tertiary); }
+.money-actions-hint.error { color:#FF8A8A; }
+.bill-card { background:linear-gradient(135deg, rgba(242,192,99,0.07), rgba(255,138,138,0.04)) !important; border:1px solid rgba(242,192,99,0.16) !important; }
+.bill-head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:12px; }
+.bill-row { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.025); border-radius:var(--radius-md); margin-bottom:8px; }
+.bill-name { font-size:14px; font-weight:600; color:var(--text-primary); }
+.bill-meta { margin-top:4px; font-size:10.5px; color:var(--text-tertiary); font-family:var(--font-mono); }
+.bill-amount { font:700 18px var(--font-mono); color:var(--text-primary); white-space:nowrap; }
+.bill-delete { background:transparent; border:1px solid rgba(255,255,255,0.10); color:var(--text-tertiary); cursor:pointer; font-size:14px; padding:5px 9px; border-radius:6px; }
+.bill-delete:hover { color:#FF8A8A; }
+.bill-add-grid { display:grid; grid-template-columns:1.5fr 1fr 1fr 1.2fr auto; gap:6px; padding:4px; margin-top:12px; background:rgba(0,0,0,0.30); border-radius:12px; }
+.bill-add-grid input, .bill-add-grid select { min-width:0; width:100%; padding:9px 10px; border:0; outline:none; background:rgba(255,255,255,0.04); color:var(--text-primary); border-radius:8px; font:13px var(--font); color-scheme:dark; }
+.bill-add-grid input[type="number"] { text-align:right; }
+.bill-add-btn { border:0; border-radius:9px; padding:0 14px; background:#F2C063; color:#241805; font:700 13px var(--font); cursor:pointer; white-space:nowrap; }
+@media (max-width:600px) {
+  .money-actions-form, .bill-add-grid { grid-template-columns:1fr; gap:8px; padding:8px; }
+  .money-actions-form select, .money-actions-form input, .money-actions-btn, .bill-add-grid input, .bill-add-grid select, .bill-add-btn { padding:12px 14px; font-size:15px; }
+  .money-actions-btn, .bill-add-btn { width:100%; }
+  .bill-row { grid-template-columns:1fr auto; }
+  .bill-amount { grid-column:2; grid-row:1; }
+  .bill-delete { grid-column:2; grid-row:2; }
+}
+
 @media (max-width: 600px) {
   .sub-auto-toggle { width: 100%; justify-content: space-between; padding: 12px 14px; }
 }
@@ -1896,6 +1945,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       </div>
     </div>
 
+    <div class="card money-actions-card">
+      <div class="money-actions-head">
+        <div class="money-actions-title">Quick money</div>
+        <div class="money-actions-sub">Add cash or move it between any asset</div>
+      </div>
+      <div class="money-actions-form">
+        <select id="moneyAction" aria-label="Money action">
+          <option value="add">Add money</option>
+          <option value="transfer">Transfer</option>
+        </select>
+        <select id="moneyFrom" aria-label="Money source">
+          <option value="">Source account</option>
+        </select>
+        <select id="moneyTo" aria-label="Money destination">
+          <option value="">Destination account</option>
+        </select>
+        <input type="number" id="moneyAmount" min="0" step="0.01" placeholder="Amount" aria-label="Amount" />
+        <button type="button" class="money-actions-btn" id="moneyApplyBtn">Apply</button>
+      </div>
+      <div class="money-actions-hint" id="moneyActionsHint">Add money increases an asset. Transfer moves the same amount from one asset to another.</div>
+    </div>
+
     <!-- Activity log — every add / edit, newest first -->
     <div class="nw-activity" id="nwActivity">
       <div class="nw-activity-h">
@@ -1991,6 +2062,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         <span class="sub-auto-label">Auto-deduct</span>
       </label>
       <button class="quick-add-btn" id="subAddBtn" onclick="window.__addSub && window.__addSub()">+ Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="section" data-section="subs">
+  <div class="section-title">
+    <span class="section-title-text">BILLS</span>
+  </div>
+  <div class="card bill-card">
+    <div class="bill-head">
+      <div>
+        <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Bills</div>
+        <div id="billsTotal" style="font-size:24px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px">CHF 0 <span style="font-size:12px;color:var(--text-tertiary);font-weight:500">/ mo</span></div>
+      </div>
+      <div id="billsCount" style="font-size:11px;color:var(--text-tertiary)"></div>
+    </div>
+    <div id="billsList"></div>
+    <div class="empty-state" id="billsEmpty">No bills yet</div>
+    <div class="bill-add-grid">
+      <input type="text" id="billName" placeholder="Bill name (e.g. Rent)" />
+      <input type="number" id="billAmount" min="0" step="0.01" placeholder="Amount" />
+      <select id="billCurrency" aria-label="Bill currency">
+        <option value="CHF">CHF</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+      <input type="text" id="billDue" placeholder="Due date or note" />
+      <button type="button" class="bill-add-btn" id="billAddBtn">+ Add bill</button>
     </div>
   </div>
 </div>
@@ -2697,6 +2797,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   function renderSubs() {
+    renderBills();
     if (!subsList) return;
     // Auto-deduct any matured renewals before painting
     processAutoDeductSubs();
@@ -2807,6 +2908,64 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     // Re-render the donut so the subs slice updates with the latest annualized total
     if (typeof renderAllNetWorth === 'function') renderAllNetWorth();
   }
+
+  function renderBills() {
+    const list = document.getElementById('billsList');
+    const empty = document.getElementById('billsEmpty');
+    const totalEl = document.getElementById('billsTotal');
+    const countEl = document.getElementById('billsCount');
+    if (!list) return;
+    const items = storeGet('bills') || [];
+    const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    if (totalEl) totalEl.innerHTML = fmtMoney(total) + ' <span style="font-size:12px;color:var(--text-tertiary);font-weight:500">/ mo</span>';
+    if (countEl) countEl.textContent = items.length + (items.length === 1 ? ' bill' : ' bills');
+    list.innerHTML = '';
+    if (!items.length) {
+      if (empty) empty.style.display = 'flex';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    items.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'bill-row';
+      const due = item.due ? 'due ' + item.due : 'monthly bill';
+      row.innerHTML = '<div><div class="bill-name">' + escapeHtml(item.name) + '</div><div class="bill-meta">' + escapeHtml(due) + '</div></div>'
+        + '<div class="bill-amount">' + fmtMoney(item.amount) + '</div>'
+        + '<button type="button" class="bill-delete" aria-label="Delete ' + escapeHtml(item.name) + '">×</button>';
+      row.querySelector('.bill-delete').addEventListener('click', () => {
+        const next = storeGet('bills') || [];
+        next.splice(idx, 1);
+        storeSet('bills', next);
+        renderBills();
+      });
+      list.appendChild(row);
+    });
+  }
+  function doBillAdd() {
+    const nameEl = document.getElementById('billName');
+    const amountEl = document.getElementById('billAmount');
+    const currencyBillEl = document.getElementById('billCurrency');
+    const dueEl = document.getElementById('billDue');
+    if (!nameEl || !amountEl) return;
+    const name = nameEl.value.trim();
+    const enteredAmount = parseFloat(amountEl.value);
+    if (!name || !(enteredAmount > 0)) { nameEl.focus(); return; }
+    const enteredCurrency = currencyBillEl ? currencyBillEl.value : 'CHF';
+    const amountCHF = enteredAmount / (exchangeRates[enteredCurrency] || 1);
+    const items = storeGet('bills') || [];
+    items.push({ name, amount: amountCHF, entered_amount: enteredAmount, entered_currency: enteredCurrency, due: dueEl ? dueEl.value.trim() : '' });
+    storeSet('bills', items);
+    nameEl.value = '';
+    amountEl.value = '';
+    if (dueEl) dueEl.value = '';
+    renderBills();
+  }
+  const billAddBtn = document.getElementById('billAddBtn');
+  if (billAddBtn) billAddBtn.addEventListener('click', doBillAdd);
+  ['billName', 'billAmount', 'billDue'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') doBillAdd(); });
+  });
 
   // ============================================================
   // Build/refresh the From-account dropdown in the subs add form,
@@ -3193,6 +3352,91 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     });
     return out;
   }
+
+  // ============================================================
+  // QUICK MONEY — add to any asset or transfer between two assets.
+  // Amounts are entered in the selected display currency and stored in CHF.
+  // ============================================================
+  function moneyAccountValue(account) {
+    return account.catKey + '::' + account.itemIdx;
+  }
+  function populateMoneyAccounts() {
+    const fromEl = document.getElementById('moneyFrom');
+    const toEl = document.getElementById('moneyTo');
+    if (!fromEl || !toEl) return;
+    const accounts = listAllNwAccounts();
+    const previousFrom = fromEl.value;
+    const previousTo = toEl.value;
+    const icons = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
+    const options = accounts.map(account => '<option value="' + moneyAccountValue(account) + '">' + icons[account.catKey] + ' ' + escapeHtml(account.itemName) + ' · ' + fmtMoney(account.amountCHF) + '</option>').join('');
+    fromEl.innerHTML = '<option value="">Source account</option>' + options;
+    toEl.innerHTML = '<option value="">Destination account</option>' + options;
+    if ([...fromEl.options].some(option => option.value === previousFrom)) fromEl.value = previousFrom;
+    if ([...toEl.options].some(option => option.value === previousTo)) toEl.value = previousTo;
+  }
+  function updateMoneyActionFields() {
+    const actionEl = document.getElementById('moneyAction');
+    const fromEl = document.getElementById('moneyFrom');
+    const hintEl = document.getElementById('moneyActionsHint');
+    if (!actionEl || !fromEl || !hintEl) return;
+    const transferring = actionEl.value === 'transfer';
+    fromEl.disabled = !transferring;
+    fromEl.style.opacity = transferring ? '1' : '0.45';
+    hintEl.textContent = transferring
+      ? 'Move money between any two assets. The total net worth stays the same.'
+      : 'Add money to an asset. Use a negative balance only through the existing account editor.';
+    hintEl.classList.remove('error');
+  }
+  function applyMoneyAction() {
+    const actionEl = document.getElementById('moneyAction');
+    const fromEl = document.getElementById('moneyFrom');
+    const toEl = document.getElementById('moneyTo');
+    const amountEl = document.getElementById('moneyAmount');
+    const hintEl = document.getElementById('moneyActionsHint');
+    if (!actionEl || !fromEl || !toEl || !amountEl || !hintEl) return;
+    const amountDisplay = parseFloat(amountEl.value);
+    const amountCHF = amountDisplay / (exchangeRates[currencyEl ? currencyEl.value : 'CHF'] || 1);
+    const destination = String(toEl.value || '').split('::');
+    const source = String(fromEl.value || '').split('::');
+    const fail = message => { hintEl.textContent = message; hintEl.classList.add('error'); };
+    if (!(amountDisplay > 0) || !isFinite(amountCHF)) return fail('Enter an amount greater than zero.');
+    if (destination.length !== 2 || destination[0] === '') return fail('Choose a destination asset.');
+    if (actionEl.value === 'transfer' && (source.length !== 2 || source[0] === '')) return fail('Choose a source asset.');
+    if (actionEl.value === 'transfer' && fromEl.value === toEl.value) return fail('Source and destination must be different.');
+    const destinationItems = storeGet('nw:' + destination[0]) || [];
+    const destinationIndex = Number(destination[1]);
+    if (!destinationItems[destinationIndex]) return fail('That destination is no longer available.');
+    let sourceItems = null;
+    let sourceIndex = -1;
+    if (actionEl.value === 'transfer') {
+      sourceItems = storeGet('nw:' + source[0]) || [];
+      sourceIndex = Number(source[1]);
+      if (!sourceItems[sourceIndex]) return fail('That source is no longer available.');
+    }
+    destinationItems[destinationIndex].amount = (Number(destinationItems[destinationIndex].amount) || 0) + amountCHF;
+    storeSet('nw:' + destination[0], destinationItems);
+    logActivity(destination[0], destinationItems[destinationIndex].name, amountCHF, actionEl.value === 'add' ? 'add' : 'edit');
+    if (actionEl.value === 'transfer') {
+      sourceItems[sourceIndex].amount = (Number(sourceItems[sourceIndex].amount) || 0) - amountCHF;
+      storeSet('nw:' + source[0], sourceItems);
+      logActivity(source[0], sourceItems[sourceIndex].name, -amountCHF, 'edit');
+    }
+    amountEl.value = '';
+    hintEl.classList.remove('error');
+    hintEl.textContent = actionEl.value === 'transfer' ? 'Transfer complete.' : 'Money added.';
+    renderAllNetWorth();
+    populateMoneyAccounts();
+    updateMoneyActionFields();
+  }
+  populateMoneyAccounts();
+  updateMoneyActionFields();
+  const moneyActionEl = document.getElementById('moneyAction');
+  const moneyApplyBtn = document.getElementById('moneyApplyBtn');
+  if (moneyActionEl) moneyActionEl.addEventListener('change', updateMoneyActionFields);
+  if (moneyApplyBtn) moneyApplyBtn.addEventListener('click', applyMoneyAction);
+  const moneyAmountEl = document.getElementById('moneyAmount');
+  if (moneyAmountEl) moneyAmountEl.addEventListener('keydown', e => { if (e.key === 'Enter') applyMoneyAction(); });
+
   // Refill the order add-form's "From" select with the user's actual NW
   // accounts, preserving the current selection if that account still exists.
   function populateOrdFromSelect() {
@@ -3639,6 +3883,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         netWorthCHF: Math.round(netWorthCHF),
         accounts: breakdown,
         subscriptions: storeGet('subs') || [],
+        bills: storeGet('bills') || [],
         incomingOrders: storeGet('incoming_orders') || [],
         wishlist: storeGet('wishlist') || []
       };
@@ -4003,7 +4248,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'finance',
-    syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
+    syncedKeys: ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
     syncedPrefixes: ['nw:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));

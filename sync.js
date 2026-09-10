@@ -1,5 +1,5 @@
 (function () {
-  const KEYS = ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history']
+  const KEYS = ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history']
   const PREFIXES = ['nw:']
   let lastPayload = ''
 
