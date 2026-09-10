@@ -1,0 +1,13 @@
+{
+  "name": "finances",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "node -e \"console.log('Static Finance app: no build step required')\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
