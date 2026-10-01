@@ -7,6 +7,8 @@
 //     finishes by its "complete by" date (computed in budget.js)
 //   • Spending analysis: patterns, budget edits you can apply, ways to
 //     save (budget:insights; re-runs itself about once a week)
+//   • Chat: ask anything; it can propose fixes to your numbers, which
+//     you apply (or undo) yourself
 // ============================================================
 (function () {
   const F = window.__finance, B = window.__budget;
@@ -254,6 +256,175 @@
     body.querySelectorAll('[data-dismiss]').forEach(b => b.addEventListener('click', () => { markDone(b.dataset.dismiss, 'dismissed'); renderAnalysis(); }));
   }
 
+  // ---------- chat: ask the coach anything, and let it fix mistakes ----------
+  // The conversation stays on this device. Each question goes to /api/chat
+  // with a snapshot of your data; proposed fixes come back as cards you can
+  // Apply (and Undo) — nothing changes until you press Apply.
+  const CHAT_KEY = 'coach:chat';
+  const undos = {}; // edit key -> undo(), for this session only
+  let chatBusy = false;
+  const readChat = () => { try { return JSON.parse(localStorage.getItem(CHAT_KEY)) || []; } catch (_) { return []; } };
+  const writeChat = msgs => { try { localStorage.setItem(CHAT_KEY, JSON.stringify(msgs.slice(-40))); } catch (_) {} };
+
+  function chatContext() {
+    const d = B.data();
+    const cat = id => d.cats.find(c => c.id === id);
+    return {
+      today: todayISO(),
+      summary: buildSummary(),
+      transactions: d.tx.slice().sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)).slice(0, 200).map(t => ({
+        id: t.id, date: t.date, merchant: t.merchant, items: (t.items || []).slice(0, 4), amount: round2(t.amount),
+        category_id: t.categoryId, category: cat(t.categoryId) ? cat(t.categoryId).name : 'Uncategorized', paid_from: d.txPaidWith(t)
+      })),
+      categories: d.cats.map(c => ({ id: c.id, name: c.name, monthly_budget: round2(c.budget), fixed: !!c.fixed })),
+      goals: d.goals.map(g => ({ id: g.id, name: g.name, target: round2(g.target), saved: round2(g.saved), complete_by: g.deadline || null, percent_of_pay: Number(g.percent) || 0, percent_is_automatic: !!g.autoPercent })),
+      income: d.income.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60).map(e => ({ id: e.id, date: e.date, amount: round2(e.amount), source: e.source || '', set_aside: round2(allocated(e)) })),
+      accounts: d.accounts.map(a => ({ ref: a.ref, name: a.name, kind: a.cat, balance: round2(a.balance) }))
+    };
+  }
+  // What the model sees of its own earlier turns (text, plus what it proposed and what you did).
+  function historyFor(msgs) {
+    return msgs.map(m => {
+      if (m.role === 'user') return { role: 'user', content: m.text };
+      const notes = (m.edits || []).map(e => '[' + (e.status || 'proposed') + ': ' + e.action + ' ' + e.id + ' ' + e.field + ']');
+      return { role: 'assistant', content: m.text + (notes.length ? '\n' + notes.join('\n') : '') };
+    });
+  }
+
+  function renderChat() {
+    const box = $('coachChat');
+    const msgs = readChat();
+    box.replaceChildren();
+    if (!msgs.length) {
+      const chips = document.createElement('div');
+      chips.className = 'coach-chips';
+      ['How am I doing this month?', 'Where can I cut back?', 'Fix a mistake…'].forEach(q => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'coach-chip'; b.textContent = q;
+        b.addEventListener('click', () => {
+          const input = $('coachAskInput');
+          if (q.endsWith('…')) { input.value = 'I made a mistake: '; input.focus(); }
+          else { input.value = q; $('coachAsk').requestSubmit(); }
+        });
+        chips.appendChild(b);
+      });
+      const hint = document.createElement('div');
+      hint.className = 'coach-note';
+      hint.textContent = 'Ask about your spending, budgets, pay or goals. If something\'s wrong ("Walmart was $32.50, not $23.50"), I\'ll suggest the fix for you to apply.';
+      box.append(hint, chips);
+    }
+    msgs.forEach((m, mi) => {
+      const bubbleEl = document.createElement('div');
+      bubbleEl.className = 'coach-msg coach-msg-' + m.role;
+      const text = document.createElement('div');
+      text.className = 'coach-msg-text';
+      text.textContent = m.text;
+      bubbleEl.appendChild(text);
+      (m.edits || []).forEach((e, ei) => bubbleEl.appendChild(editCard(m, mi, e, ei)));
+      box.appendChild(bubbleEl);
+    });
+    if (chatBusy) {
+      const t = document.createElement('div');
+      t.className = 'coach-msg coach-msg-assistant coach-typing';
+      t.innerHTML = '<span class="bg-spinner"></span>Thinking…';
+      box.appendChild(t);
+    }
+  }
+
+  function editCard(m, mi, e, ei) {
+    const key = mi + ':' + ei;
+    const card = document.createElement('div');
+    card.className = 'coach-edit';
+    const d = e.status === 'applied' || e.status === 'undone' ? (e.summary || {}) : B.describeEdit(e);
+    const title = document.createElement('div');
+    title.className = 'coach-edit-title';
+    title.textContent = d.title || 'Proposed change';
+    card.appendChild(title);
+    if (d.before != null || d.after) {
+      const diff = document.createElement('div');
+      diff.className = 'coach-edit-diff';
+      if (d.before != null) { const b = document.createElement('s'); b.textContent = d.before; diff.append(b, ' → '); }
+      const a = document.createElement('b'); a.textContent = d.after || ''; diff.appendChild(a);
+      card.appendChild(diff);
+    }
+    if (e.reason) { const r = document.createElement('div'); r.className = 'coach-edit-reason'; r.textContent = e.reason; card.appendChild(r); }
+    const row = document.createElement('div');
+    row.className = 'coach-edit-actions';
+    const setStatus = (status, extra) => {
+      const msgs = readChat();
+      Object.assign(msgs[mi].edits[ei], { status }, extra || {});
+      writeChat(msgs);
+      renderChat();
+    };
+    if (e.status === 'applied') {
+      row.innerHTML = '<span class="bg-status ok">Applied</span>';
+      if (undos[key]) {
+        const u = document.createElement('button');
+        u.type = 'button'; u.className = 'bg-btn bg-btn-sm'; u.textContent = 'Undo';
+        u.addEventListener('click', () => { undos[key](); delete undos[key]; setStatus('undone'); });
+        row.appendChild(u);
+      }
+    } else if (e.status === 'undone') row.innerHTML = '<span class="bg-status idle">Undone</span>';
+    else if (e.status === 'skipped') row.innerHTML = '<span class="bg-status idle">Skipped</span>';
+    else if (!d.ok) {
+      const warn = document.createElement('span');
+      warn.className = 'bg-status warn';
+      warn.textContent = 'Can\'t apply: ' + d.error;
+      row.appendChild(warn);
+    } else {
+      const apply = document.createElement('button');
+      apply.type = 'button'; apply.className = 'bg-btn bg-btn-primary bg-btn-sm'; apply.textContent = 'Apply';
+      apply.addEventListener('click', () => {
+        const res = B.applyEdit(e);
+        if (!res.ok) return setStatus('failed', { summary: { title: d.title, after: res.error } });
+        undos[key] = res.undo;
+        setStatus('applied', { summary: { title: d.title, before: d.before, after: d.after } });
+      });
+      const skip = document.createElement('button');
+      skip.type = 'button'; skip.className = 'bg-btn bg-btn-sm'; skip.textContent = 'Skip';
+      skip.addEventListener('click', () => setStatus('skipped'));
+      row.append(apply, skip);
+    }
+    card.appendChild(row);
+    return card;
+  }
+
+  async function sendChat(text) {
+    if (chatBusy || !text.trim()) return;
+    const msgs = readChat();
+    msgs.push({ role: 'user', text: text.trim().slice(0, 1000) });
+    writeChat(msgs);
+    chatBusy = true;
+    renderChat();
+    scrollChat();
+    let reply;
+    try {
+      const r = await fetch('/api/chat', { method: 'POST', headers: await aiHeaders(), body: JSON.stringify({ messages: historyFor(msgs), context: chatContext() }) });
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 401 || r.status === 403) reply = { role: 'assistant', text: data.error || 'Sign in (top right) to chat with your coach.', error: true };
+      else if (!r.ok) reply = { role: 'assistant', text: data.error || 'I couldn\'t answer just now. Try again in a moment.', error: true };
+      else reply = { role: 'assistant', text: data.reply || '…', edits: (data.edits || []).map(e => ({ ...e, status: 'proposed' })) };
+    } catch (_) {
+      reply = { role: 'assistant', text: 'I couldn\'t reach the server. Check your connection and try again.', error: true };
+    }
+    const all = readChat();
+    all.push(reply);
+    writeChat(all);
+    chatBusy = false;
+    renderChat();
+    scrollChat();
+  }
+  function scrollChat() { const body = panel.querySelector('.coach-body'); body.scrollTop = body.scrollHeight; }
+
+  $('coachAsk').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = $('coachAskInput');
+    const text = input.value;
+    input.value = '';
+    sendChat(text);
+  });
+  $('coachChatClear').addEventListener('click', () => { writeChat([]); renderChat(); });
+
   // ---------- the bubble & panel ----------
   const dot = bubble.querySelector('.coach-dot');
   function markUnread() { if (panel.hidden && dot) dot.hidden = false; }
@@ -268,7 +439,7 @@
       if (focus) $('coachClose').focus();
     } else if (focus) bubble.focus();
   }
-  function renderAll() { renderToday(); renderPlan(); renderAnalysis(); }
+  function renderAll() { renderToday(); renderPlan(); renderAnalysis(); renderChat(); }
 
   bubble.addEventListener('click', () => setOpen(panel.hidden, true));
   $('coachClose').addEventListener('click', () => setOpen(false, true));

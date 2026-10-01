@@ -24,7 +24,8 @@ export function getClient() {
 
 // One structured-output call. `schema` constrains the reply to JSON, so the
 // result is parsed directly. Refusals fall back server-side to another model.
-export async function askForJson({ system, content, schema, effort = 'medium', maxTokens = 8000 }) {
+// Pass `content` for a single question, or `messages` for a conversation.
+export async function askForJson({ system, content, messages, schema, effort = 'medium', maxTokens = 8000 }) {
   const response = await getClient().beta.messages.create({
     model: MODEL,
     max_tokens: maxTokens,
@@ -33,7 +34,7 @@ export async function askForJson({ system, content, schema, effort = 'medium', m
     thinking: { type: 'adaptive' },
     output_config: { effort, format: { type: 'json_schema', schema } },
     system,
-    messages: [{ role: 'user', content }],
+    messages: messages || [{ role: 'user', content }],
   })
   if (response.stop_reason === 'refusal') throw new ClaudeError(422, 'The AI declined to process that request.')
   if (response.stop_reason === 'max_tokens') throw new ClaudeError(502, 'The AI reply was cut off. Try again.')

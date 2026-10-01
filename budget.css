@@ -329,3 +329,28 @@ html.auth-redirect body { visibility: hidden; }
 .acct-item { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 9px; border: 0; background: transparent; color: var(--text-secondary); font: 600 13px var(--font); text-decoration: none; cursor: pointer; }
 .acct-item:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
 .acct-out { color: #FF8A8A; }
+
+/* Coach chat (coach.js) */
+.coach-chat { display: flex; flex-direction: column; gap: 8px; }
+.coach-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.coach-chip { padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(110,231,183,0.3); background: rgba(110,231,183,0.06); color: var(--text-secondary); font: 600 12px var(--font); cursor: pointer; }
+.coach-chip:hover { color: var(--text-primary); border-color: #6EE7B7; }
+.coach-msg { max-width: 92%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; }
+.coach-msg-user { align-self: flex-end; background: rgba(110,231,183,0.14); color: var(--text-primary); border-bottom-right-radius: 5px; }
+.coach-msg-assistant { align-self: flex-start; background: rgba(255,255,255,0.05); color: var(--text-primary); border-bottom-left-radius: 5px; }
+.coach-msg-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.coach-typing { color: var(--text-tertiary); font-size: 12.5px; }
+.coach-edit { margin-top: 8px; padding: 10px 11px; border-radius: 11px; background: rgba(0,0,0,0.35); border: 1px solid rgba(110,231,183,0.22); }
+.coach-edit-title { font-size: 12.5px; font-weight: 700; color: var(--text-primary); }
+.coach-edit-diff { margin-top: 4px; font: 13px var(--font-mono); color: var(--text-secondary); }
+.coach-edit-diff s { color: var(--text-tertiary); }
+.coach-edit-diff b { color: #6EE7B7; }
+.coach-edit-reason { margin-top: 4px; font-size: 11.5px; color: var(--text-tertiary); }
+.coach-edit-actions { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.coach-ask { display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom) / 2); border-top: 1px solid rgba(255,255,255,0.08); background: #0b0d0c; }
+.coach-ask input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-primary); font: 14px var(--font); outline: none; }
+.coach-ask input:focus { border-color: rgba(110,231,183,0.5); }
+.coach-body { flex: 1; min-height: 0; }
+.acct-sync { font-size: 11px; color: var(--text-tertiary); margin-top: 5px; }
+.acct-sync.ok { color: #6EE7B7; }
+.acct-sync.bad { color: #FF8A8A; }

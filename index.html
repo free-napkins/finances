@@ -1259,7 +1259,15 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       <div class="coach-row"><div class="coach-eyebrow">Spending analysis</div><button type="button" class="bg-btn bg-btn-sm" id="coachAnalyze">Analyze my spending</button></div>
       <div id="coachAnalysis"></div>
     </section>
+    <section>
+      <div class="coach-row"><div class="coach-eyebrow">Ask your coach</div><button type="button" class="bg-btn bg-btn-sm" id="coachChatClear">Clear chat</button></div>
+      <div class="coach-chat" id="coachChat" aria-live="polite"></div>
+    </section>
   </div>
+  <form class="coach-ask" id="coachAsk">
+    <input type="text" id="coachAskInput" maxlength="1000" autocomplete="off" placeholder="Ask anything, or tell me what to fix…" aria-label="Message your coach" />
+    <button type="submit" class="bg-btn bg-btn-primary" aria-label="Send">Send</button>
+  </form>
 </div>
 
 <script>

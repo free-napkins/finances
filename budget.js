@@ -76,8 +76,36 @@
       storeSet(K.cats, [
         ['🏠', 'Rent', true], ['🛒', 'Groceries'], ['🍔', 'Dining out'], ['⛽', 'Gas'],
         ['👕', 'Clothing'], ['🧴', 'Personal care'], ['🎬', 'Entertainment'], ['📦', 'Other']
-      ].map(([icon, name, fixed]) => ({ id: uid('c_'), icon, name, budget: 0, fixed: !!fixed })));
+      // Fixed ids, so every device's starter set is the same and syncs as one.
+      ].map(([icon, name, fixed]) => ({ id: 'c_' + name.toLowerCase().replace(/[^a-z]+/g, '_'), icon, name, budget: 0, fixed: !!fixed })));
     }
+  }
+
+  // Categories with the same name are one category: fold duplicates (e.g. two
+  // devices that each created the starter set before syncing) into the one
+  // with a budget / more transactions, moving their transactions across.
+  function dedupeCategories() {
+    const cats = getCats();
+    const groups = {};
+    cats.forEach(c => { const k = String(c.name).trim().toLowerCase(); (groups[k] = groups[k] || []).push(c); });
+    if (!Object.values(groups).some(g => g.length > 1)) return false;
+    const uses = {};
+    getTx().forEach(t => { uses[t.categoryId] = (uses[t.categoryId] || 0) + 1; });
+    const remap = {}, winners = {};
+    Object.values(groups).forEach(g => {
+      const ranked = g.slice().sort((a, b) => ((Number(b.budget) > 0) - (Number(a.budget) > 0)) || ((uses[b.id] || 0) - (uses[a.id] || 0)));
+      const win = { ...ranked[0] };
+      ranked.slice(1).forEach(c => {
+        remap[c.id] = win.id;
+        if (!(Number(win.budget) > 0) && Number(c.budget) > 0) win.budget = c.budget;
+        if (c.fixed) win.fixed = true;
+      });
+      winners[win.id] = win;
+    });
+    const seen = new Set();
+    storeSet(K.cats, cats.map(c => winners[remap[c.id] || c.id]).filter(c => !seen.has(c.id) && seen.add(c.id)));
+    storeSet(K.tx, getTx().map(t => (remap[t.categoryId] ? { ...t, categoryId: remap[t.categoryId] } : t)));
+    return true;
   }
 
   // ---------- net-worth accounts ("cat::name" refs, same as subs/bills) ----------
@@ -378,7 +406,8 @@
   function renderForms() {
     const catSel = $('bgTxCategory'), acctSel = $('bgTxAccount');
     const prevCat = catSel.value;
-    const prevAcct = acctSel.options.length ? acctSel.value : matchAccount('');
+    // Keep your pick; until you choose, follow the best guess (accounts may arrive from sync after the first render).
+    const prevAcct = acctSel.dataset.touched ? acctSel.value : matchAccount('');
     catSel.innerHTML = catOptions(prevCat);
     acctSel.innerHTML = payOptions(prevAcct);
     acctSel.value = prevAcct;
@@ -952,6 +981,7 @@
   function addCategory() {
     const name = $('bgCatName').value.trim();
     if (!name) { $('bgCatName').focus(); return; }
+    if (getCats().some(c => c.name.trim().toLowerCase() === name.toLowerCase())) { toast('You already have a "' + name + '" category.'); $('bgCatName').select(); return; }
     save(K.cats, getCats().concat({ id: uid('c_'), icon: $('bgCatIcon').value.trim(), name, budget: num($('bgCatBudget').value), fixed: $('bgCatFixed').checked }));
     ['bgCatIcon', 'bgCatName', 'bgCatBudget'].forEach(id => { $(id).value = ''; });
     $('bgCatFixed').checked = false;
@@ -982,6 +1012,7 @@
       if (!$('bgTxCategory').dataset.touched) $('bgTxCategory').value = guessCategory($('bgTxMerchant').value) || $('bgTxCategory').value;
     });
     $('bgTxCategory').addEventListener('change', () => { $('bgTxCategory').dataset.touched = '1'; });
+    $('bgTxAccount').addEventListener('change', () => { $('bgTxAccount').dataset.touched = '1'; });
     $('bgCatAdd').addEventListener('click', addCategory);
     ['bgCatName', 'bgCatBudget'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); }));
     $('bgGoalAdd').addEventListener('click', addGoal);
@@ -994,9 +1025,156 @@
     $('bgPayAmount').addEventListener('keydown', e => { if (e.key === 'Enter' && $('bgPaySave')) logPay(true); });
     // Net worth or a cloud sync changed underneath us.
     window.addEventListener('finance:changed', () => { if (!document.activeElement || !document.activeElement.closest('.bg-inline, .bg-split')) renderAll(); });
-    window.addEventListener('storage', renderAll);
+    window.addEventListener('storage', () => { dedupeCategories(); renderAll(); });
     // Roll over to the new day/week when the app is reopened.
     document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
+  }
+
+  // ============================================================
+  // COACH EDITS — the chat coach proposes fixes ("that Walmart receipt was
+  // $32.50, not $23.50"); coach.js shows each one and only applies it when
+  // you press Apply. describeEdit() checks the edit against the current data
+  // and says what will change; applyEdit() makes the change the same way
+  // the app's own buttons would (moving money between accounts as needed)
+  // and returns an undo that restores everything it touched.
+  // ============================================================
+  const EDIT_KEYS = ['budget:transactions', 'budget:income', 'budget:goals', 'budget:categories', 'nw:bank', 'nw:stocks', 'nw:crypto', 'nw:other', 'nw:activity'];
+  const editNum = v => (typeof v === 'number' && isFinite(v) ? round2(v) : NaN);
+  const okAmount = v => isFinite(v) && v >= 0 && v < 10000000;
+  function findAccount(ref) {
+    const ix = String(ref || '').indexOf('::');
+    if (ix < 0) return null;
+    const cat = ref.slice(0, ix), name = ref.slice(ix + 2);
+    const items = storeGet('nw:' + cat) || [];
+    const idx = items.findIndex(it => String(it.name) === name);
+    return idx < 0 ? null : { cat, name, items, idx };
+  }
+
+  function describeEdit(e) {
+    const bad = error => ({ ok: false, error });
+    if (!e || typeof e !== 'object') return bad('Not a valid change.');
+    const n = editNum(e.number), t = String(e.text || '').trim();
+    switch (e.action) {
+      case 'update_transaction':
+      case 'delete_transaction': {
+        const tx = getTx().find(x => x.id === e.id);
+        if (!tx) return bad('That transaction no longer exists.');
+        const title = tx.merchant + ' · ' + shortDate(tx.date) + ' · ' + money(tx.amount);
+        if (e.action === 'delete_transaction') return { ok: true, title: 'Delete ' + title, after: tx.deductedFrom ? money(tx.amount) + ' goes back to ' + accountName(tx.deductedFrom) : '' };
+        if (e.field === 'amount') return okAmount(n) && n > 0 ? { ok: true, title, before: money(tx.amount), after: money(n) } : bad('Amount must be more than $0.');
+        if (e.field === 'date') return validISO(t) ? { ok: true, title, before: shortDate(tx.date), after: shortDate(t) } : bad('Not a valid date.');
+        if (e.field === 'merchant') return t ? { ok: true, title, before: tx.merchant, after: t.slice(0, 80) } : bad('Name can\'t be empty.');
+        if (e.field === 'category') {
+          const c = getCats().find(x => x.id === t);
+          const old = getCats().find(x => x.id === tx.categoryId);
+          return c ? { ok: true, title, before: old ? catLabel(old) : 'Uncategorized', after: catLabel(c) } : bad('Unknown category.');
+        }
+        if (e.field === 'account') {
+          if (t && !findAccount(t)) return bad('Unknown account.');
+          return { ok: true, title, before: txPaidWith(tx), after: t ? accountLabel(t) : 'No account (not deducted)' };
+        }
+        return bad('Can\'t change that on a transaction.');
+      }
+      case 'set_category_budget': {
+        const c = getCats().find(x => x.id === e.id);
+        if (!c) return bad('That category no longer exists.');
+        return okAmount(n) ? { ok: true, title: catLabel(c) + ' monthly budget', before: money(c.budget), after: money(n) } : bad('Budget must be $0 or more.');
+      }
+      case 'update_goal': {
+        const g = getGoals().find(x => x.id === e.id);
+        if (!g) return bad('That goal no longer exists.');
+        const title = (g.icon ? g.icon + ' ' : '') + g.name;
+        if (e.field === 'target' || e.field === 'saved') return okAmount(n) ? { ok: true, title: title + ' ' + e.field, before: money(g[e.field] || 0), after: money(n) } : bad('Amount must be $0 or more.');
+        if (e.field === 'percent') {
+          if (g.deadline) return bad('This goal\'s % is set automatically from its complete-by date. Change the date instead.');
+          return n >= 0 && n <= 100 ? { ok: true, title: title + ' % of pay', before: (Number(g.percent) || 0) + '%', after: n + '%' } : bad('Percent must be 0–100.');
+        }
+        if (e.field === 'deadline') return !t || validISO(t) ? { ok: true, title: title + ' complete-by date', before: g.deadline ? shortDate(g.deadline) : 'none', after: t ? shortDate(t) : 'none' } : bad('Not a valid date.');
+        if (e.field === 'name') return t ? { ok: true, title: 'Goal name', before: g.name, after: t.slice(0, 60) } : bad('Name can\'t be empty.');
+        return bad('Can\'t change that on a goal.');
+      }
+      case 'update_income':
+      case 'delete_income': {
+        const inc = getIncome().find(x => x.id === e.id);
+        if (!inc) return bad('That pay entry no longer exists.');
+        const title = 'Pay · ' + (inc.source || 'Pay') + ' · ' + shortDate(inc.date) + ' · ' + money(inc.amount);
+        if (e.action === 'delete_income') return { ok: true, title: 'Delete ' + title, after: 'Account moves and savings from it are reversed' };
+        if (e.field === 'amount') {
+          const aside = (inc.allocations || []).reduce((s, a) => s + a.amount, 0);
+          return okAmount(n) && n >= aside ? { ok: true, title, before: money(inc.amount), after: money(n) } : bad('Pay can\'t be less than the ' + money(aside) + ' already set aside from it.');
+        }
+        if (e.field === 'date') return validISO(t) ? { ok: true, title, before: shortDate(inc.date), after: shortDate(t) } : bad('Not a valid date.');
+        if (e.field === 'source') return { ok: true, title, before: inc.source || 'Pay', after: t.slice(0, 60) || 'Pay' };
+        return bad('Can\'t change that on a pay entry.');
+      }
+      case 'set_account_balance': {
+        const a = findAccount(e.id);
+        if (!a) return bad('That account no longer exists.');
+        return isFinite(n) && Math.abs(n) < 1e9 ? { ok: true, title: accountLabel(e.id) + ' balance', before: money(a.items[a.idx].amount), after: money(n) } : bad('Not a valid balance.');
+      }
+      default: return bad('The coach suggested something I can\'t do.');
+    }
+  }
+
+  function applyEdit(e) {
+    const d = describeEdit(e);
+    if (!d.ok) return d;
+    const snapshot = {};
+    EDIT_KEYS.forEach(k => { snapshot[k] = localStorage.getItem(k); });
+    const n = editNum(e.number), t = String(e.text || '').trim();
+    const label = 'Coach fix';
+
+    if (e.action === 'delete_transaction') deleteTransaction(e.id);
+    else if (e.action === 'update_transaction') {
+      const txs = getTx(), tx = txs.find(x => x.id === e.id);
+      if (e.field === 'amount') {
+        if (tx.deductedFrom) adjustAccount(tx.deductedFrom, -(n - tx.amount), label + ' · ' + tx.merchant);
+        tx.amount = n;
+      } else if (e.field === 'date') tx.date = t;
+      else if (e.field === 'merchant') tx.merchant = t.slice(0, 80);
+      else if (e.field === 'category') tx.categoryId = t;
+      else if (e.field === 'account') {
+        if (tx.deductedFrom) adjustAccount(tx.deductedFrom, tx.amount, label + ' · ' + tx.merchant);
+        tx.deductedFrom = t && adjustAccount(t, -tx.amount, tx.merchant) ? t : null;
+        tx.accountRef = t;
+      }
+      storeSet(K.tx, txs);
+    } else if (e.action === 'set_category_budget') {
+      storeSet(K.cats, getCats().map(c => (c.id === e.id ? { ...c, budget: n } : c)));
+    } else if (e.action === 'update_goal') {
+      const value = e.field === 'deadline' ? t : e.field === 'name' ? t.slice(0, 60) : n;
+      storeSet(K.goals, getGoals().map(g => (g.id === e.id ? { ...g, [e.field]: value } : g)));
+      autoPlan();
+    } else if (e.action === 'delete_income') deleteIncome(e.id);
+    else if (e.action === 'update_income') {
+      const all = getIncome(), inc = all.find(x => x.id === e.id);
+      if (e.field === 'amount') {
+        const delta = n - inc.amount;
+        const deposit = (inc.moves || []).find(m => m.ref === inc.depositTo && m.delta > 0);
+        if (deposit && adjustAccount(deposit.ref, delta, label + ' · pay')) deposit.delta = round2(deposit.delta + delta);
+        inc.amount = n;
+      } else if (e.field === 'date') inc.date = t;
+      else inc.source = t.slice(0, 60);
+      storeSet(K.income, all);
+      autoPlan();
+    } else if (e.action === 'set_account_balance') {
+      const a = findAccount(e.id);
+      const before = Number(a.items[a.idx].amount) || 0;
+      a.items[a.idx].amount = n;
+      storeSet('nw:' + a.cat, a.items);
+      F.logActivity(a.cat, a.name, n - before, 'edit');
+    }
+    F.renderAllNetWorth();
+    save(K.tx, getTx()); // re-render everything + notify listeners (sync, charts, coach)
+    return {
+      ok: true,
+      undo() {
+        Object.entries(snapshot).forEach(([k, v]) => { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); });
+        autoPlan();
+        F.renderAllNetWorth();
+        save(K.tx, getTx());
+      }
+    };
   }
 
   seed();
@@ -1007,6 +1185,8 @@
     plan: () => storeGet(K.plan),
     autoPlan,
     scores: () => storeGet(K.scores) || {},
+    describeEdit,
+    applyEdit,
     setCategoryBudget: (id, amount) => save(K.cats, getCats().map(c => (c.id === id ? { ...c, budget: round2(amount) } : c))),
     categories: getCats,
     accounts: payAccounts,
@@ -1016,6 +1196,7 @@
     recordReceipt: ({ merchant, date, accountRef, lines }) => recordTransactions({ merchant, date, accountRef, lines, receipt: true })
   };
   wire();
+  dedupeCategories();
   autoPlan();
   renderAll();
 })();

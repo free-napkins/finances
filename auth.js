@@ -16,7 +16,7 @@
   var enabled = !!(config.supabaseUrl && config.supabaseAnonKey && window.supabase && B);
 
   var DATA_PREFIXES = ['nw:', 'budget:'];
-  var DATA_KEYS = ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw_currency', 'sync:meta', 'box:owner'];
+  var DATA_KEYS = ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw_currency', 'sync:meta', 'sync:base', 'box:owner'];
   // Remove every finance value from this browser (your account keeps the synced copy).
   function clearFinanceData() {
     var doomed = [];
@@ -97,7 +97,18 @@
     var who = el('div', 'acct-who');
     var name = el('div', 'acct-name', session.user.email || '');
     var mail = el('div', 'acct-mail', '');
-    who.append(name, mail);
+    var syncLine = el('div', 'acct-sync', 'Syncing…');
+    who.append(name, mail, syncLine);
+    function showSync() {
+      var st = window.__financeSync && window.__financeSync.status;
+      if (!st) return;
+      if (st.state === 'error') { syncLine.textContent = '⚠ Sync problem: ' + st.error; syncLine.className = 'acct-sync bad'; return; }
+      if (!st.lastOk) { syncLine.textContent = 'Syncing…'; syncLine.className = 'acct-sync'; return; }
+      var secs = Math.max(0, Math.round((Date.now() - st.lastOk) / 1000));
+      syncLine.textContent = '✓ Synced ' + (secs < 5 ? 'just now' : secs < 90 ? secs + 's ago' : Math.round(secs / 60) + ' min ago') + (st.live ? ' · live' : '');
+      syncLine.className = 'acct-sync ok';
+    }
+    window.addEventListener('finance:sync', showSync);
     var settings = el('a', 'acct-item', 'Account settings');
     settings.href = B.accountUrl;
     settings.setAttribute('role', 'menuitem');
@@ -119,7 +130,11 @@
     menu.append(who, settings, home, out);
     wrap.append(btn, menu);
     document.body.appendChild(wrap);
-    function setOpen(open) { menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); }
+    function setOpen(open) {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) { showSync(); if (window.__financeSync) window.__financeSync.pull(); }
+    }
     btn.addEventListener('click', function () { setOpen(menu.hidden); });
     document.addEventListener('pointerdown', function (e) { if (!wrap.contains(e.target)) setOpen(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
