@@ -11,6 +11,7 @@
     document.body.appendChild(button)
     async function paint(session) {
       window.__financeAuth.session = session
+      window.dispatchEvent(new CustomEvent('finance:auth', { detail: session }))
       button.textContent = session ? 'Sign out' : 'Sign in'
       button.onclick = async function () {
         if (session) return client.auth.signOut()

@@ -7,6 +7,7 @@ Static Vercel finance dashboard with Supabase authentication and per-user state 
 1. Run `supabase/schema.sql` in the Supabase SQL editor.
 2. Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel.
 3. Configure `ANTHROPIC_API_KEY` in Vercel. It powers receipt scanning (`api/receipt.js`, which sorts items into budget categories) and the budget coach (`api/insights.js`).
+4. The AI routes only answer signed-in Supabase users (`api/_auth.js`). Set `ALLOWED_USER_EMAILS` (comma separated) to limit them to your own account(s). Locally, with no Supabase settings, they're open for testing.
 
 ## Tabs
 

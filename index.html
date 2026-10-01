@@ -2150,7 +2150,7 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
         const categories = budget() ? budget().categories().map(c => ({ id: c.id, name: c.name })) : [];
         const r = await fetch('/api/receipt', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await window.__financeAuth.headers()) },
           body: JSON.stringify({ image: img.base64, mediaType: img.mediaType, categories })
         });
         const data = await r.json().catch(() => ({}));

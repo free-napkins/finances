@@ -1,4 +1,5 @@
 import { askForJson, getClient, requirePost, sendClaudeError, sendJson } from './_claude.js'
+import { requireUser } from './_auth.js'
 
 const VALID_MEDIA_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 
@@ -41,6 +42,7 @@ function receiptSchema(categoryIds) {
 
 export default async function handler(req, res) {
   if (!requirePost(req, res)) return
+  if (!(await requireUser(req, res))) return
   if (!getClient()) return sendJson(res, 503, { error: 'Receipt reading is not configured on this deployment.' })
 
   const body = req.body || {}

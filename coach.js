@@ -34,6 +34,7 @@
   const allocated = e => sum(e.allocations || [], a => a.amount);
 
   const state = { dailyBusy: false, analysisBusy: false, analysisError: '' };
+  const aiHeaders = async () => ({ 'Content-Type': 'application/json', ...(await window.__financeAuth.headers()) });
 
   // ---------- month-to-date numbers shared by the tips ----------
   function monthStatus(d) {
@@ -126,18 +127,21 @@
     if (cached.date === today && cached.source === 'ai') return;
     if (state.dailyBusy) return;
     // Don't hammer the API when it's down: one AI retry per hour per day.
-    if (cached.date === today && cached.source === 'local' && Date.now() - (cached.attemptAt || 0) < 3600000) return;
+    // A sign-in problem is retried as soon as you're signed in (see the auth listener below).
+    if (cached.date === today && cached.source === 'local' && !cached.auth && Date.now() - (cached.attemptAt || 0) < 3600000) return;
+    if (cached.date === today && cached.auth && !(window.__financeAuth && window.__financeAuth.session)) return;
     state.dailyBusy = true;
     renderToday();
     let next;
     try {
-      const r = await fetch('/api/insights', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'daily', summary: buildSummary() }) });
+      const r = await fetch('/api/insights', { method: 'POST', headers: await aiHeaders(), body: JSON.stringify({ mode: 'daily', summary: buildSummary() }) });
       const data = await r.json().catch(() => ({}));
+      if (r.status === 401 || r.status === 403) { const e = new Error(data.error || 'Sign in to get AI tips.'); e.auth = true; throw e; }
       if (!r.ok || !Array.isArray(data.bullets) || data.bullets.length < 3) throw new Error(data.error || 'no tips');
       next = { date: today, bullets: data.bullets.slice(0, 3), source: 'ai', at: Date.now() };
       markUnread();
     } catch (e) {
-      next = { date: today, bullets: localBullets(), source: 'local', attemptAt: Date.now(), error: e.message };
+      next = { date: today, bullets: localBullets(), source: 'local', attemptAt: Date.now(), error: e.message, auth: !!e.auth };
     }
     F.storeSet(DAILY_KEY, next);
     state.dailyBusy = false;
@@ -152,7 +156,8 @@
     $('coachToday').innerHTML = bullets.map(b => '<li>' + esc(b) + '</li>').join('');
     $('coachTodaySrc').innerHTML = state.dailyBusy ? '<span class="bg-spinner"></span>Writing today\'s tips…'
       : fresh && cached.source === 'ai' ? 'Written for you this morning'
-        : 'From your numbers · AI tips unavailable right now';
+        : fresh && cached.auth ? 'From your numbers · sign in (top right) for AI tips'
+          : 'From your numbers · AI tips unavailable right now';
   }
 
   // ---------- savings autopilot ----------
@@ -183,7 +188,7 @@
     F.storeSet(INSIGHTS_KEY, { ...prev, attemptAt: Date.now() });
     renderAnalysis();
     try {
-      const r = await fetch('/api/insights', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ summary: buildSummary() }) });
+      const r = await fetch('/api/insights', { method: 'POST', headers: await aiHeaders(), body: JSON.stringify({ summary: buildSummary() }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error((data && data.error) || 'The coach could not analyze your budget.');
       const ins = data.insights || {};
@@ -271,6 +276,9 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) setOpen(false, true); });
   document.addEventListener('pointerdown', e => { if (!panel.hidden && !panel.contains(e.target) && !bubble.contains(e.target)) setOpen(false); });
   ['budget:changed', 'budget:plan', 'storage'].forEach(ev => window.addEventListener(ev, () => { if (!panel.hidden) { renderPlan(); renderAnalysis(); if (!state.dailyBusy) renderToday(); } }));
+
+  // Once you sign in, fetch today's AI tips if they were waiting on it.
+  window.addEventListener('finance:auth', e => { if (e.detail && readDaily().auth && readDaily().date === todayISO()) loadDaily(); });
 
   // Pop up from the bubble every time the app opens.
   setTimeout(() => setOpen(true, false), 500);

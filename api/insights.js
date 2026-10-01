@@ -1,4 +1,5 @@
 import { askForJson, getClient, requirePost, sendClaudeError, sendJson } from './_claude.js'
+import { requireUser } from './_auth.js'
 
 function ids(list) {
   return Array.isArray(list)
@@ -75,6 +76,7 @@ Rules for the bullets:
 
 export default async function handler(req, res) {
   if (!requirePost(req, res)) return
+  if (!(await requireUser(req, res))) return
   if (!getClient()) return sendJson(res, 503, { error: 'AI insights are not configured on this deployment.' })
 
   const summary = req.body && req.body.summary
