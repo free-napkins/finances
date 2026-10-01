@@ -3,6 +3,7 @@
 <head>
 <script src="lock.js"></script>
 <script src="/api/config"></script>
+<script src="usd-migration.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0b">
@@ -43,6 +44,12 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+select, select option {
+  color-scheme: dark;
+  background-color: #17181c;
+  color: var(--text-primary);
+}
 
 html, body {
   background: var(--bg-deep);
@@ -156,67 +163,6 @@ body::after {
 
 /* Sections: hide non-active when bottom tabs are in use */
 .section[hidden] { display: none !important; }
-
-/* ===== Nova — AI money coach ===== */
-.nova-wrap { display: flex; flex-direction: column; gap: 12px; }
-.nova-messages {
-  display: flex; flex-direction: column; gap: 10px;
-  min-height: 240px; max-height: 58vh; overflow-y: auto;
-  padding: 2px;
-}
-.nova-msg {
-  max-width: 88%; padding: 10px 13px; border-radius: 14px;
-  font-size: 13.5px; line-height: 1.5;
-  white-space: pre-wrap; overflow-wrap: anywhere;
-}
-.nova-msg-user {
-  align-self: flex-end;
-  background: rgba(255,255,255,0.10);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-bottom-right-radius: 4px;
-}
-.nova-msg-nova {
-  align-self: flex-start;
-  background: rgba(255,255,255,0.03);
-  color: var(--text-secondary);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-bottom-left-radius: 4px;
-}
-.nova-msg-loading { color: var(--text-tertiary); font-style: italic; }
-.nova-suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
-.nova-chip {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: var(--text-secondary);
-  border-radius: 999px; padding: 7px 13px;
-  font-size: 12px; font-family: inherit; cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.nova-chip:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
-.nova-composer { display: flex; gap: 8px; align-items: flex-end; }
-.nova-input {
-  flex: 1; resize: none; min-height: 44px; max-height: 130px;
-  background: rgba(0,0,0,0.30);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: var(--text-primary);
-  border-radius: 12px; padding: 11px 13px;
-  font-family: inherit; font-size: 14px; line-height: 1.4; outline: none;
-}
-.nova-input::placeholder { color: var(--text-tertiary); }
-.nova-input:focus { border-color: rgba(255,255,255,0.22); }
-.nova-send {
-  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px;
-  background: var(--text-primary); color: #000; border: none; cursor: pointer;
-  font-size: 18px; font-weight: 700; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  transition: opacity 0.15s;
-}
-.nova-send:disabled { opacity: 0.4; cursor: default; }
-.nova-disclaimer {
-  font-size: 10.5px; color: var(--text-tertiary);
-  text-align: center; letter-spacing: 0.02em;
-}
 
 /* ===== Receipt scanner — drag a photo in, AI reads it, deduct it ===== */
 .rcpt-card { margin-bottom: 14px; }
@@ -850,879 +796,6 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .nw-activity-list.hidden { display: none; }
 
 /* ============================================================
-   ORDERS — full-spec form (name, cost, ccy, from-category, date)
-   ============================================================ */
-.ord-add-card {
-  background: rgba(255,255,255,0.025) !important;
-  border: 1px solid rgba(255,255,255,0.05) !important;
-}
-.ord-add-eyebrow {
-  font-size: 10px; letter-spacing: 0.18em; font-weight: 800;
-  text-transform: uppercase; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  margin-bottom: 10px;
-}
-.ord-add-grid {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr 0.8fr 1.1fr 1.1fr auto;
-  gap: 6px; align-items: stretch;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.30);
-  border-radius: 12px;
-}
-@media (max-width: 720px) {
-  .ord-add-grid { grid-template-columns: 1fr 1fr; }
-  .ord-add-grid .ord-input-name { grid-column: 1 / -1; }
-  .ord-add-grid .ord-add-btn    { grid-column: 1 / -1; }
-}
-.ord-input {
-  background: transparent; border: none; outline: none;
-  color: var(--text-primary);
-  font-family: inherit; font-size: 13px;
-  padding: 9px 10px;
-  min-width: 0;
-  -moz-appearance: textfield;
-}
-.ord-input::-webkit-outer-spin-button,
-.ord-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.ord-input::placeholder { color: var(--text-tertiary); }
-.ord-input-cost { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-.ord-input-ccy, .ord-input-from {
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  cursor: pointer; font-weight: 600;
-  appearance: none; -webkit-appearance: none;
-  text-align: center;
-}
-.ord-input-from { font-size: 12px; }
-.ord-add-btn {
-  padding: 0 14px;
-  background: linear-gradient(180deg, #6EE7B7, #4ED4A0);
-  color: #04201A; border: none;
-  border-radius: 9px;
-  font-family: inherit; font-size: 13px; font-weight: 700;
-  cursor: pointer; white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(110,231,183,0.22);
-  transition: transform 0.12s, box-shadow 0.18s;
-}
-.ord-add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(110,231,183,0.36); }
-.ord-add-btn:active { transform: scale(0.97); }
-.ord-add-preview {
-  margin-top: 10px; padding: 8px 12px;
-  background: rgba(110,231,183,0.06);
-  border: 1px solid rgba(110,231,183,0.14);
-  border-radius: 8px;
-  font-size: 12px; color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
-.ord-add-preview.warn { background: rgba(242,192,99,0.08); border-color: rgba(242,192,99,0.20); color: #F2C063; }
-.ord-add-preview.bad  { background: rgba(255,138,138,0.08); border-color: rgba(255,138,138,0.20); color: #FF8A8A; }
-
-.ord-section-h {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin: 18px 4px 8px;
-}
-.ord-section-label {
-  font-size: 10px; letter-spacing: 0.18em; font-weight: 800;
-  text-transform: uppercase; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-}
-.ord-section-count {
-  font-size: 11px; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.ord-card {
-  background: rgba(255,255,255,0.025);
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin-bottom: 8px;
-  border-left: 3px solid var(--text-tertiary);
-  transition: background 0.15s;
-}
-.ord-card:hover { background: rgba(255,255,255,0.045); }
-.ord-card.cat-bank   { border-left-color: #7DD3FC; }
-.ord-card.cat-stocks { border-left-color: #6EE7B7; }
-.ord-card.cat-crypto { border-left-color: #FBBF24; }
-.ord-card.cat-other  { border-left-color: #B794F4; }
-.ord-card-h {
-  display: grid; grid-template-columns: 1fr auto auto;
-  gap: 12px; align-items: baseline;
-}
-.ord-card-name {
-  font-size: 15px; font-weight: 700;
-  color: var(--text-primary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ord-card-amt {
-  font-size: 17px; font-weight: 700;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-.ord-card-x {
-  background: transparent; border: 1px solid rgba(255,255,255,0.08);
-  color: var(--text-tertiary);
-  cursor: pointer; font-size: 14px;
-  padding: 4px 9px; border-radius: 6px;
-  font-family: inherit; line-height: 1;
-}
-.ord-card-x:hover { color: #FF8A8A; }
-.ord-card-meta {
-  display: flex; flex-wrap: wrap; gap: 10px;
-  margin-top: 8px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--text-tertiary);
-}
-.ord-meta-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 9px; border-radius: 999px;
-  background: rgba(255,255,255,0.04);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.ord-meta-pill.from { color: var(--text-secondary); }
-.ord-meta-pill.pct.good { color: #6EE7B7; background: rgba(110,231,183,0.10); }
-.ord-meta-pill.pct.warn { color: #F2C063; background: rgba(242,192,99,0.10); }
-.ord-meta-pill.pct.bad  { color: #FF8A8A; background: rgba(255,138,138,0.10); }
-.ord-meta-pill.date { color: var(--text-secondary); }
-.ord-meta-pill.date.soon { color: #F2C063; background: rgba(242,192,99,0.10); }
-.ord-meta-pill.date.today { color: #6EE7B7; background: rgba(110,231,183,0.10); }
-.ord-meta-pill.date.past { color: #FF8A8A; background: rgba(255,138,138,0.10); }
-
-.ord-empty-card {
-  text-align: center; padding: 32px 20px;
-  background: rgba(255,255,255,0.025);
-  border-radius: 14px;
-  border: 1px dashed rgba(255,255,255,0.08);
-}
-.ord-empty-card.hidden { display: none; }
-.ord-empty-icon {
-  font-size: 36px; margin-bottom: 8px;
-  opacity: 0.6;
-}
-.ord-empty-title {
-  font-size: 15px; font-weight: 700;
-  color: var(--text-primary); margin-bottom: 4px;
-}
-.ord-empty-sub {
-  font-size: 12px; color: var(--text-tertiary);
-  line-height: 1.5; max-width: 360px; margin: 0 auto;
-}
-
-/* ============================================================
-   WISHLIST — premium polished UI
-   ============================================================ */
-/* Hero card */
-.wish-hero {
-  background: linear-gradient(135deg, rgba(183,148,244,0.08), rgba(110,231,183,0.04)) !important;
-  border: 1px solid rgba(183,148,244,0.18) !important;
-  position: relative; overflow: hidden;
-}
-.wish-hero::after {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 160px; height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(183,148,244,0.18), transparent 70%);
-  filter: blur(20px);
-  pointer-events: none;
-}
-.wish-hero-top {
-  display: flex; justify-content: space-between; align-items: flex-end;
-  gap: 16px; margin-bottom: 14px; position: relative;
-}
-.wish-hero-eyebrow {
-  font-size: 10px; letter-spacing: 0.20em; font-weight: 700;
-  text-transform: uppercase; color: var(--text-tertiary);
-  margin-bottom: 6px;
-}
-.wish-hero-num {
-  font-size: 32px; font-weight: 700; letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums; line-height: 1;
-  color: var(--text-primary);
-}
-.wish-hero-pct-wrap { text-align: right; }
-.wish-hero-pct-label {
-  font-size: 10px; letter-spacing: 0.16em; font-weight: 700;
-  text-transform: uppercase; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  margin-bottom: 4px;
-}
-.wish-hero-pct-num {
-  font-size: 22px; font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-mono);
-  color: #B794F4;
-}
-.wish-hero-pct-num.warn { color: #F2C063; }
-.wish-hero-pct-num.bad  { color: #FF8A8A; }
-.wish-hero-bar {
-  height: 6px; border-radius: 3px;
-  background: rgba(255,255,255,0.06);
-  overflow: hidden; position: relative;
-}
-.wish-hero-bar-fill {
-  height: 100%; border-radius: 3px;
-  background: linear-gradient(90deg, #B794F4, #6EE7B7);
-  box-shadow: 0 0 8px rgba(183,148,244,0.5);
-  transition: width 0.4s ease;
-}
-.wish-hero-foot {
-  font-size: 11.5px; color: var(--text-tertiary);
-  margin-top: 10px; position: relative;
-  font-family: var(--font-mono);
-}
-
-/* Add card */
-.wish-add-card {
-  background: rgba(255,255,255,0.025) !important;
-  border: 1px solid rgba(255,255,255,0.05) !important;
-}
-.wish-add-eyebrow {
-  font-size: 10px; letter-spacing: 0.18em; font-weight: 800;
-  text-transform: uppercase; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  margin-bottom: 10px;
-}
-.wish-add-row {
-  display: flex; gap: 6px; align-items: stretch;
-  flex-wrap: wrap;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.30);
-  border-radius: 12px;
-}
-.wish-input {
-  background: transparent; border: none; outline: none;
-  color: var(--text-primary);
-  font-family: inherit; font-size: 14px;
-  padding: 9px 12px;
-  -moz-appearance: textfield;
-}
-.wish-input::-webkit-outer-spin-button,
-.wish-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.wish-input::placeholder { color: var(--text-tertiary); }
-.wish-input-name { flex: 2; min-width: 160px; }
-.wish-input-amt  { flex: 1; min-width: 80px; max-width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
-.wish-input-ccy {
-  flex: 0 1 80px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 9px;
-  color: var(--text-primary);
-  font-family: inherit; font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  appearance: none; -webkit-appearance: none;
-  text-align: center;
-}
-.wish-add-btn {
-  padding: 0 18px;
-  background: linear-gradient(180deg, #B794F4, #9F7DD4);
-  color: #ffffff; border: none;
-  border-radius: 9px;
-  font-family: inherit; font-size: 14px; font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(183,148,244,0.30);
-  transition: transform 0.12s, box-shadow 0.18s;
-}
-.wish-add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(183,148,244,0.45); }
-.wish-add-btn:active { transform: scale(0.97); }
-
-.wish-section-h {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin: 18px 4px 8px;
-}
-.wish-section-label {
-  font-size: 10px; letter-spacing: 0.18em; font-weight: 800;
-  text-transform: uppercase; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-}
-.wish-section-count {
-  font-size: 11px; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.wish-empty-card {
-  text-align: center; padding: 32px 20px;
-  background: rgba(255,255,255,0.025);
-  border-radius: 14px;
-  border: 1px dashed rgba(255,255,255,0.08);
-}
-.wish-empty-card.hidden { display: none; }
-.wish-empty-icon {
-  font-size: 36px; margin-bottom: 8px;
-  opacity: 0.6;
-}
-.wish-empty-title {
-  font-size: 15px; font-weight: 700;
-  color: var(--text-primary); margin-bottom: 4px;
-}
-.wish-empty-sub {
-  font-size: 12px; color: var(--text-tertiary);
-  line-height: 1.5; max-width: 320px; margin: 0 auto;
-}
-
-/* ===== Wishlist rows ===== */
-.wish-row {
-  background: rgba(255,255,255,0.025);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
-}
-.wish-row-h {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  align-items: center;
-}
-.wish-row-info { min-width: 0; }
-.wish-row-name {
-  font-weight: 600; color: var(--text-primary);
-  font-size: 14px;
-}
-.wish-row-meta {
-  font-size: 11px; color: var(--text-tertiary);
-  margin-top: 2px;
-  font-family: var(--font-mono);
-}
-.wish-row-amt-wrap { text-align: right; line-height: 1.1; }
-.wish-row-amt {
-  font-size: 17px; font-weight: 700;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-mono);
-}
-.wish-row-pct {
-  font-size: 10.5px; font-weight: 700;
-  margin-top: 3px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.wish-row-pct.good { color: #6BE3A4; }
-.wish-row-pct.warn { color: #F2C063; }
-.wish-row-pct.bad  { color: #FF8A8A; }
-.wish-row-pct.flat { color: var(--text-tertiary); }
-.wish-row-x {
-  background: transparent; border: 1px solid rgba(255,255,255,0.10);
-  color: var(--text-tertiary);
-  cursor: pointer; font-size: 14px;
-  padding: 4px 8px; border-radius: 6px;
-  font-family: inherit; line-height: 1;
-}
-.wish-row-x:hover { color: #FF8A8A; }
-.wish-row-bar {
-  height: 5px; border-radius: 3px;
-  background: rgba(255,255,255,0.04);
-  margin-top: 10px;
-  overflow: hidden;
-}
-.wish-row-bar-fill {
-  height: 100%; border-radius: 3px;
-  transition: width 0.3s ease;
-}
-.wish-row-bar-fill.good { background: #6BE3A4; box-shadow: 0 0 6px rgba(107,227,164,0.5); }
-.wish-row-bar-fill.warn { background: #F2C063; box-shadow: 0 0 6px rgba(242,192,99,0.5); }
-.wish-row-bar-fill.bad  { background: #FF8A8A; box-shadow: 0 0 6px rgba(255,138,138,0.5); }
-.wish-row-bar-fill.flat { background: rgba(255,255,255,0.20); }
-
-/* ============================================================
-   FINANCE TICKER — rotating Nasdaq-style subscription renewal
-   header at the very top of the finances section.
-   ============================================================ */
-.finance-ticker {
-  display: flex; align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  margin-bottom: 18px;
-  background: linear-gradient(90deg, rgba(110,231,183,0.06), rgba(125,211,252,0.04));
-  border: 1px solid rgba(110,231,183,0.14);
-  border-radius: 12px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  overflow: hidden;
-  position: relative;
-  min-height: 38px;
-  transition: background 0.4s, border-color 0.4s;
-}
-.finance-ticker.hidden { display: none; }
-.finance-ticker.urgent {
-  background: linear-gradient(90deg, rgba(255,138,138,0.10), rgba(255,138,138,0.04));
-  border-color: rgba(255,138,138,0.30);
-  animation: tickerPulse 1.2s ease-in-out infinite;
-}
-@keyframes tickerPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,138,138,0.0); }
-  50%      { box-shadow: 0 0 14px 0 rgba(255,138,138,0.30); }
-}
-.ticker-tag {
-  font-size: 9.5px; letter-spacing: 0.18em; font-weight: 800;
-  text-transform: uppercase; color: var(--text-tertiary);
-  padding: 3px 8px;
-  background: rgba(0,0,0,0.30);
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-.finance-ticker.urgent .ticker-tag { color: #FF8A8A; background: rgba(255,138,138,0.10); }
-.ticker-stream {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  overflow: hidden;
-  height: 18px;
-}
-.ticker-item {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; gap: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.35s, transform 0.35s;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-}
-.ticker-item.active {
-  opacity: 1;
-  transform: translateY(0);
-}
-.ticker-item-name {
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.ticker-item-amt {
-  font-weight: 700;
-  color: #6BE3A4;
-}
-.finance-ticker.urgent .ticker-item-amt { color: #FF8A8A; }
-.ticker-item-days {
-  color: var(--text-tertiary);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 11px;
-}
-.finance-ticker.urgent .ticker-item-days {
-  color: #FF8A8A;
-  font-weight: 700;
-}
-.ticker-dots {
-  display: flex; gap: 4px;
-  flex-shrink: 0;
-}
-.ticker-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.18);
-  transition: background 0.2s;
-}
-.ticker-dot.active { background: #6BE3A4; }
-.finance-ticker.urgent .ticker-dot.active { background: #FF8A8A; }
-
-/* ============================================================
-   DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
-   ============================================================ */
-.ord-card-foot {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(255,255,255,0.06);
-  display: flex; flex-wrap: wrap; gap: 8px;
-  align-items: center;
-}
-.ord-deduct-btn {
-  background: linear-gradient(180deg, rgba(125,211,252,0.18), rgba(125,211,252,0.08));
-  border: 1px solid rgba(125,211,252,0.30);
-  color: #BFE3F8;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.12s, background 0.18s, box-shadow 0.18s;
-}
-.ord-deduct-btn:hover {
-  background: linear-gradient(180deg, rgba(125,211,252,0.28), rgba(125,211,252,0.12));
-  box-shadow: 0 4px 14px rgba(125,211,252,0.22);
-  transform: translateY(-1px);
-}
-.ord-deduct-btn:active { transform: scale(0.97); }
-.ord-deducted-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #6EE7B7;
-  background: rgba(110,231,183,0.10);
-  border: 1px solid rgba(110,231,183,0.20);
-  padding: 5px 10px;
-  border-radius: 999px;
-}
-.ord-deducted-pill::before {
-  content: '✓';
-  font-size: 12px;
-}
-.ord-deduct-undo {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.10);
-  color: var(--text-tertiary);
-  font-family: inherit;
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 4px 9px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.ord-deduct-undo:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.20); }
-
-.ord-deduct-chooser {
-  margin-top: 10px;
-  padding: 12px;
-  background: rgba(0,0,0,0.30);
-  border: 1px solid rgba(125,211,252,0.18);
-  border-radius: 10px;
-}
-.ord-deduct-chooser-title {
-  font-size: 10px; letter-spacing: 0.18em; font-weight: 800;
-  text-transform: uppercase; color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  margin-bottom: 8px;
-}
-.ord-deduct-options {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  margin-bottom: 8px;
-}
-.ord-deduct-opt {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.ord-deduct-opt:hover {
-  background: rgba(125,211,252,0.10);
-  border-color: rgba(125,211,252,0.30);
-}
-.ord-deduct-opt small {
-  display: block;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text-tertiary);
-  margin-top: 2px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-}
-.ord-deduct-opt.insufficient {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.ord-deduct-opt.insufficient:hover {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.06);
-}
-.ord-deduct-cancel {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  text-decoration: underline;
-}
-.ord-card.is-deducted { opacity: 0.85; }
-.ord-card.is-deducted .ord-card-name { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: rgba(255,255,255,0.20); }
-.ord-meta-pill.pct.frozen { font-style: italic; }
-.ord-meta-pill.pct.frozen::after { content: ' · frozen'; opacity: 0.6; font-style: normal; }
-
-/* ============================================================
-   SUBSCRIPTION ROW URGENT FLASH — fires when the renewal is
-   ≤ 5 days away (including today / tomorrow / past).
-   ============================================================ */
-.sub-row.is-urgent {
-  background: linear-gradient(135deg, rgba(255,138,138,0.14), rgba(255,138,138,0.06)) !important;
-  border: 1px solid rgba(255,138,138,0.30) !important;
-  animation: subRowPulse 1.4s ease-in-out infinite;
-}
-.sub-row.is-urgent .sub-renew-line {
-  color: #FF8A8A !important;
-  font-weight: 700;
-}
-@keyframes subRowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,138,138,0); }
-  50%      { box-shadow: 0 0 16px 0 rgba(255,138,138,0.32); }
-}
-
-/* ============================================================
-   DESKTOP / TABLET: lay the Subs add form out as a clean 4-column
-   grid so the 8 controls (name, amount, ccy, period, date, from,
-   auto-deduct, +add) sit in two readable rows instead of cramming
-   into one squashed row.
-   ============================================================ */
-@media (min-width: 601px) {
-  [data-section="subs"] .quick-add {
-    display: grid !important;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 8px !important;
-    align-items: stretch;
-  }
-  [data-section="subs"] .quick-add > * {
-    flex: none !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    width: 100%;
-  }
-  [data-section="subs"] .quick-add .date-field,
-  [data-section="subs"] .quick-add .sub-auto-toggle {
-    box-sizing: border-box;
-  }
-}
-
-/* ============================================================
-   MOBILE: stack every "add" composer (Subs / Orders / Wishlist)
-   vertically with full-width tappable fields + a big Add button.
-   Without this the forms squeeze 5-6 controls into one row and
-   become unusable on a phone.
-   ============================================================ */
-@media (max-width: 600px) {
-  /* ---------- Subscriptions add row ---------- */
-  [data-section="subs"] .quick-add {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 8px;
-    gap: 8px;
-  }
-  [data-section="subs"] .quick-add input,
-  [data-section="subs"] .quick-add select,
-  [data-section="subs"] .quick-add button {
-    flex: none !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    width: 100%;
-    padding: 12px 14px !important;
-    font-size: 15px !important;
-  }
-
-  /* ---------- Orders add grid ---------- */
-  .ord-add-grid {
-    grid-template-columns: 1fr !important;
-    gap: 8px;
-    padding: 8px;
-  }
-  .ord-add-grid .ord-input,
-  .ord-add-grid .ord-add-btn {
-    width: 100%;
-    padding: 12px 14px !important;
-    font-size: 15px !important;
-    text-align: left;
-  }
-  .ord-add-grid .ord-input-cost { text-align: right; }
-  .ord-add-grid .ord-input-ccy,
-  .ord-add-grid .ord-input-from { text-align: center; }
-  .ord-add-grid .ord-add-btn { text-align: center; }
-
-  /* ---------- Wishlist add row ---------- */
-  .wish-add-row {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 8px;
-    gap: 8px;
-  }
-  .wish-add-row .wish-input,
-  .wish-add-row .wish-add-btn {
-    flex: none !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    width: 100%;
-    padding: 12px 14px !important;
-    font-size: 15px !important;
-  }
-  .wish-add-row .wish-input-amt { text-align: right; }
-  .wish-add-row .wish-input-ccy { text-align: center; }
-
-  /* ---------- Bigger close (×) and edit buttons in rows ---------- */
-  .ord-card-x, .wish-row-x {
-    padding: 8px 12px !important;
-    font-size: 16px !important;
-  }
-}
-
-/* ============================================================
-   DATE FIELDS — wrap each date input in a label that shows a
-   📅 emoji prefix so it's obvious what the field is. The native
-   picker icon gets a dark-mode filter so it shows up on the
-   dark background instead of vanishing into it.
-   ============================================================ */
-.date-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: var(--bg-card);
-  border: 0.5px solid rgba(255,255,255,0.10);
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  color: var(--text-primary);
-  min-width: 0;
-  cursor: pointer;
-}
-.date-field .date-emoji {
-  font-size: 15px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.date-field input[type="date"] {
-  background: transparent !important;
-  border: none !important;
-  outline: none;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 13px;
-  padding: 0 !important;
-  margin: 0 !important;
-  min-width: 0;
-  flex: 1;
-  width: 100%;
-  color-scheme: dark;
-}
-input[type="date"] { color-scheme: dark; }
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.85);
-  opacity: 0.7;
-  cursor: pointer;
-}
-@media (max-width: 600px) {
-  .date-field {
-    width: 100%;
-    padding: 12px 14px;
-  }
-  .date-field input[type="date"] { font-size: 15px !important; }
-}
-
-/* ============================================================
-   SUBSCRIPTION AUTO-DEDUCT TOGGLE
-   ============================================================ */
-.sub-auto-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: var(--bg-card);
-  border: 0.5px solid rgba(255,255,255,0.10);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  font-family: inherit;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.sub-auto-toggle input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.sub-auto-track {
-  position: relative;
-  display: inline-block;
-  width: 30px;
-  height: 16px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.10);
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-.sub-auto-thumb {
-  position: absolute;
-  top: 2px; left: 2px;
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  background: #FAFAFA;
-  transition: transform 0.2s, background 0.2s;
-}
-.sub-auto-toggle input:checked ~ .sub-auto-track {
-  background: #6BE3A4;
-}
-.sub-auto-toggle input:checked ~ .sub-auto-track .sub-auto-thumb {
-  transform: translateX(14px);
-  background: #04201A;
-}
-.sub-auto-toggle input:checked ~ .sub-auto-label {
-  color: #6BE3A4;
-  font-weight: 700;
-}
-.sub-auto-label {
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* In-row toggle (smaller) for individual sub rows */
-.sub-row-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 999px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  font-weight: 700;
-}
-.sub-row-toggle.is-on {
-  background: rgba(107,227,164,0.10);
-  border-color: rgba(107,227,164,0.30);
-  color: #6BE3A4;
-}
-.sub-row-toggle .sub-row-toggle-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: rgba(255,255,255,0.25);
-}
-.sub-row-toggle.is-on .sub-row-toggle-dot {
-  background: #6BE3A4;
-  box-shadow: 0 0 6px rgba(107,227,164,0.7);
-}
-
-.sub-from-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background: rgba(125,211,252,0.10);
-  border: 1px solid rgba(125,211,252,0.20);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: #BFE3F8;
-  font-weight: 700;
-}
-
-/* ============================================================
    QUICK MONEY ACTIONS
    ============================================================ */
 .money-actions-card {
@@ -1734,7 +807,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .money-actions-title { font-size:13px; font-weight:700; color:var(--text-primary); }
 .money-actions-sub { font-size:11px; color:var(--text-tertiary); }
 .money-actions-form {
-  display:grid; grid-template-columns:1fr 1fr 1fr 120px auto; gap:6px; align-items:stretch;
+  display:grid; grid-template-columns:1fr 1fr 1fr 1.2fr 120px auto; gap:6px; align-items:stretch;
   padding:4px; background:rgba(0,0,0,0.30); border-radius:12px;
 }
 .money-actions-form select, .money-actions-form input {
@@ -1750,31 +823,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .money-actions-btn:hover { filter:brightness(1.08); }
 .money-actions-hint { min-height:16px; margin-top:8px; font-size:11px; color:var(--text-tertiary); }
 .money-actions-hint.error { color:#FF8A8A; }
-.bill-card { background:linear-gradient(135deg, rgba(242,192,99,0.07), rgba(255,138,138,0.04)) !important; border:1px solid rgba(242,192,99,0.16) !important; }
-.bill-head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:12px; }
-.bill-row { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.025); border-radius:var(--radius-md); margin-bottom:8px; }
-.bill-name { font-size:14px; font-weight:600; color:var(--text-primary); }
-.bill-meta { margin-top:4px; font-size:10.5px; color:var(--text-tertiary); font-family:var(--font-mono); }
-.bill-amount { font:700 18px var(--font-mono); color:var(--text-primary); white-space:nowrap; }
-.bill-delete { background:transparent; border:1px solid rgba(255,255,255,0.10); color:var(--text-tertiary); cursor:pointer; font-size:14px; padding:5px 9px; border-radius:6px; }
-.bill-delete:hover { color:#FF8A8A; }
-.bill-add-grid { display:grid; grid-template-columns:1.5fr 1fr 1fr 1.2fr auto; gap:6px; padding:4px; margin-top:12px; background:rgba(0,0,0,0.30); border-radius:12px; }
-.bill-add-grid input, .bill-add-grid select { min-width:0; width:100%; padding:9px 10px; border:0; outline:none; background:rgba(255,255,255,0.04); color:var(--text-primary); border-radius:8px; font:13px var(--font); color-scheme:dark; }
-.bill-add-grid input[type="number"] { text-align:right; }
-.bill-add-btn { border:0; border-radius:9px; padding:0 14px; background:#F2C063; color:#241805; font:700 13px var(--font); cursor:pointer; white-space:nowrap; }
 @media (max-width:600px) {
-  .money-actions-form, .bill-add-grid { grid-template-columns:1fr; gap:8px; padding:8px; }
-  .money-actions-form select, .money-actions-form input, .money-actions-btn, .bill-add-grid input, .bill-add-grid select, .bill-add-btn { padding:12px 14px; font-size:15px; }
-  .money-actions-btn, .bill-add-btn { width:100%; }
-  .bill-row { grid-template-columns:1fr auto; }
-  .bill-amount { grid-column:2; grid-row:1; }
-  .bill-delete { grid-column:2; grid-row:2; }
-}
-
-@media (max-width: 600px) {
-  .sub-auto-toggle { width: 100%; justify-content: space-between; padding: 12px 14px; }
+  .money-actions-form { grid-template-columns:1fr; gap:8px; padding:8px; }
+  .money-actions-form select, .money-actions-form input, .money-actions-btn { padding:12px 14px; font-size:15px; }
+  .money-actions-btn { width:100%; }
 }
 </style>
+<!-- after the inline styles so budget.css wins ties -->
+<link rel="stylesheet" href="budget.css">
 </head>
 <body>
 <div class="shell">
@@ -1785,11 +841,235 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <span>Back</span>
 </a>
 
-<!-- ===== FINANCE TICKER (rotating subscription renewals) ===== -->
-<div class="finance-ticker hidden" id="financeTicker">
-  <span class="ticker-tag" id="tickerTag">RENEWS</span>
-  <div class="ticker-stream" id="tickerStream"></div>
-  <div class="ticker-dots" id="tickerDots"></div>
+<!-- ===== BUDGET (monthly categories, receipts, transactions, AI coach) ===== -->
+<div class="section" data-section="budget" hidden>
+  <div class="section-title">
+    <span class="section-title-text">MONTHLY BUDGET</span>
+  </div>
+
+  <div class="card bg-hero">
+    <div class="bg-month-nav">
+      <button type="button" class="bg-icon-btn" id="bgPrevMonth" aria-label="Previous month">‹</button>
+      <div class="bg-month-label" id="bgMonthLabel">—</div>
+      <button type="button" class="bg-icon-btn" id="bgNextMonth" aria-label="Next month">›</button>
+    </div>
+    <div class="bg-hero-stats">
+      <div><div class="bg-eyebrow">Budgeted</div><div class="bg-hero-num" id="bgBudgeted">—</div></div>
+      <div><div class="bg-eyebrow">Spent</div><div class="bg-hero-num" id="bgSpent">—</div></div>
+      <div><div class="bg-eyebrow">Left</div><div class="bg-hero-num" id="bgLeft">—</div></div>
+    </div>
+    <div class="bg-bar bg-bar-lg"><div class="bg-bar-fill" id="bgHeroFill"></div><div class="bg-bar-pace" id="bgHeroPace"></div></div>
+    <div class="bg-hero-foot" id="bgHeroFoot"></div>
+  </div>
+
+  <div class="card bg-card bg-graph-card" id="bgGraphCard">
+    <div class="bg-card-head">
+      <div><div class="bg-card-title">📊 Graphs</div><div class="bg-card-sub" id="bgGraphSub"></div></div>
+      <span class="bg-graph-style" id="bgGraphStyle"></span>
+    </div>
+    <div class="bg-graph-controls">
+      <select id="bgGraphView" aria-label="What to graph"></select>
+      <div class="bg-types" id="bgGraphTypes" role="group" aria-label="Chart type"></div>
+    </div>
+    <div class="bg-graph" id="bgGraph"></div>
+  </div>
+
+  <!-- Receipt scanner — AI reads the photo and sorts each item into a budget category -->
+  <!-- Receipt scanner and transactions side by side (stacked on phones) -->
+  <div class="bg-pair">
+  <div class="card bg-card rcpt-card" id="rcptCard">
+    <div class="rcpt-head">
+      <div class="rcpt-head-title">
+        <span class="rcpt-emoji">🧾</span>
+        <div>
+          <div class="rcpt-t">Scan a receipt</div>
+          <div class="rcpt-s">Items are sorted into your categories automatically · bank screenshots update a balance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drop zone (default) -->
+    <div class="rcpt-drop" id="rcptDrop" role="button" tabindex="0" aria-label="Upload a receipt photo">
+      <div class="rcpt-drop-icon">↗</div>
+      <div class="rcpt-drop-main"><span class="rcpt-fine">Drop a receipt here</span><span class="rcpt-touch">Snap or pick a receipt photo</span></div>
+      <div class="rcpt-drop-sub rcpt-fine">or click to upload · paste with ⌘V</div>
+      <div class="rcpt-pick">
+        <button type="button" class="rcpt-pick-btn rcpt-pick-camera" id="rcptCameraBtn">📷 Take photo</button>
+        <button type="button" class="rcpt-pick-btn" id="rcptLibraryBtn">🖼️ Choose photo</button>
+      </div>
+    </div>
+    <!-- capture opens the rear camera on phones; the plain input lets you pick from the library or files -->
+    <input type="file" id="rcptCamera" accept="image/*" capture="environment" class="hidden" />
+    <input type="file" id="rcptFile" accept="image/*" class="hidden" />
+
+    <!-- Busy state -->
+    <div class="rcpt-state hidden" id="rcptBusy">
+      <img class="rcpt-thumb" id="rcptThumb" alt="" />
+      <div class="rcpt-busy-text">Reading receipt<span class="rcpt-dots"></span></div>
+    </div>
+
+    <!-- Error -->
+    <div class="rcpt-error hidden" id="rcptError"></div>
+
+    <!-- Confirmation -->
+    <div class="rcpt-confirm hidden" id="rcptConfirm">
+      <div class="rcpt-confirm-top">
+        <img class="rcpt-thumb" id="rcptConfirmThumb" alt="" />
+        <div class="rcpt-fields">
+          <div class="rcpt-field full">
+            <label for="rcptMerchant">Merchant</label>
+            <input type="text" id="rcptMerchant" placeholder="Merchant" />
+          </div>
+          <div class="rcpt-field full">
+            <label for="rcptTotal">Total ($)</label>
+            <input type="text" inputmode="decimal" id="rcptTotal" class="mono" placeholder="0.00" />
+          </div>
+          <div class="rcpt-field full">
+            <label for="rcptAccount">Paid with</label>
+            <select id="rcptAccount"></select>
+          </div>
+        </div>
+      </div>
+      <div class="rcpt-items hidden" id="rcptItems"></div>
+      <div class="rcpt-hint" id="rcptHint"></div>
+      <div class="rcpt-actions">
+        <button type="button" class="rcpt-btn" id="rcptDiscard">Discard</button>
+        <button type="button" class="rcpt-btn rcpt-btn-apply" id="rcptApply">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-card bg-tx-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">🧾 Transactions</div>
+      <div class="bg-filters">
+        <select id="bgFilterCat" aria-label="Filter by category"></select>
+        <select id="bgFilterMethod" aria-label="Filter by card or cash"></select>
+      </div>
+    </div>
+    <div id="bgTxList"></div>
+  </div>
+  </div>
+
+  <div class="card bg-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">✍️ Log an expense</div>
+    </div>
+    <div class="bg-form bg-expense-form">
+      <input type="date" id="bgTxDate" aria-label="Date" />
+      <input type="text" id="bgTxMerchant" placeholder="Where / what" aria-label="Merchant or description" />
+      <select id="bgTxCategory" aria-label="Category"></select>
+      <select id="bgTxMethod" aria-label="Paid with"></select>
+      <input type="number" id="bgTxAmount" min="0" step="0.01" placeholder="$ amount" aria-label="Amount in dollars" />
+      <button type="button" class="bg-btn bg-btn-primary" id="bgTxAdd">+ Add</button>
+    </div>
+    <div class="bg-form-hint" id="bgTxHint"></div>
+  </div>
+
+  <div class="card bg-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">📂 Categories</div>
+      <div class="bg-card-sub" id="bgCatCount"></div>
+    </div>
+    <div class="bg-cat-table" id="bgCatTable"></div>
+    <div class="bg-form bg-cat-form">
+      <input type="text" id="bgCatIcon" maxlength="4" placeholder="🙂" aria-label="Icon" />
+      <input type="text" id="bgCatName" placeholder="New category (e.g. Clothing)" aria-label="Category name" />
+      <input type="number" id="bgCatBudget" min="0" step="1" placeholder="$ monthly budget" aria-label="Monthly budget in dollars" />
+      <label class="bg-check" title="Fixed costs like rent are judged per month, not per week, in your weekly score"><input type="checkbox" id="bgCatFixed" /> Fixed</label>
+      <button type="button" class="bg-btn bg-btn-primary" id="bgCatAdd">+ Add</button>
+    </div>
+  </div>
+
+  <div class="card bg-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">💳 Cards &amp; cash</div>
+      <div class="bg-card-sub">Link one to an account to deduct purchases automatically</div>
+    </div>
+    <div id="bgMethodList"></div>
+    <div class="bg-form bg-method-form">
+      <input type="text" id="bgMethodName" placeholder="Name (e.g. Visa ••4821)" aria-label="Card name" />
+      <select id="bgMethodType" aria-label="Type">
+        <option value="debit">Debit card</option>
+        <option value="credit">Credit card</option>
+        <option value="cash">Cash</option>
+      </select>
+      <select id="bgMethodAccount" aria-label="Linked account"></select>
+      <button type="button" class="bg-btn bg-btn-primary" id="bgMethodAdd">+ Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAYDAY (daily income + savings goals) ===== -->
+<div class="section" data-section="payday" hidden>
+  <div class="section-title">
+    <span class="section-title-text">PAYDAY</span>
+  </div>
+
+  <div class="card bg-card bg-pay-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">💵 Log today's pay</div>
+      <div class="bg-card-sub" id="bgPayWeek"></div>
+    </div>
+    <div class="bg-form bg-pay-form">
+      <input type="date" id="bgPayDate" aria-label="Date" />
+      <input type="number" id="bgPayAmount" min="0" step="0.01" placeholder="$ made today" aria-label="Dollars earned" />
+      <input type="text" id="bgPaySource" placeholder="Source (e.g. Shift, Tips)" aria-label="Source" />
+      <select id="bgPayAccount" aria-label="Deposit into"></select>
+    </div>
+    <div id="bgPaySplit"></div>
+  </div>
+
+  <div class="card bg-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">🎯 Savings goals</div>
+      <div class="bg-card-sub" id="bgGoalPct"></div>
+    </div>
+    <div id="bgGoalList"></div>
+    <div class="bg-form bg-goal-form">
+      <input type="text" id="bgGoalIcon" maxlength="4" placeholder="🏦" aria-label="Icon" />
+      <input type="text" id="bgGoalName" placeholder="Goal (e.g. Emergency fund)" aria-label="Goal name" />
+      <input type="number" id="bgGoalTarget" min="0" step="1" placeholder="$ target" aria-label="Target in dollars" />
+      <input type="number" id="bgGoalPercent" min="0" max="100" step="1" placeholder="% (auto)" aria-label="Percent of each day's pay; set automatically when there's a complete-by date" title="Set automatically when there's a complete-by date" />
+      <label class="bg-date-field" title="The coach sets how much of each payday to save so the goal finishes by this date"><span>Complete by</span><input type="date" id="bgGoalDeadline" aria-label="Complete by" /></label>
+      <select id="bgGoalAccount" aria-label="Savings account"></select>
+      <button type="button" class="bg-btn bg-btn-primary" id="bgGoalAdd">+ Add</button>
+    </div>
+  </div>
+
+  <div class="card bg-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">📅 Income log</div>
+      <div class="bg-card-sub" id="bgIncomeTotals"></div>
+    </div>
+    <div id="bgIncomeList"></div>
+  </div>
+</div>
+
+<!-- ===== WEEKLY SCORE (the game) ===== -->
+<div class="section" data-section="score" hidden>
+  <div class="section-title">
+    <span class="section-title-text">WEEKLY SCORE</span>
+  </div>
+  <div id="bgScoreNow"></div>
+  <div id="bgScoreLast"></div>
+  <div class="card bg-card">
+    <div class="bg-card-head">
+      <div class="bg-card-title">🏆 Season</div>
+      <div class="bg-card-sub" id="bgLevel"></div>
+    </div>
+    <div id="bgScoreHistory"></div>
+    <div id="bgBadges"></div>
+  </div>
+  <div class="card bg-card">
+    <div class="bg-card-title" style="margin-bottom:8px">How scoring works</div>
+    <div class="bg-rules">
+      <div><b>Savings · 35%</b> What you set aside this week compared with your plan (your goals' % of each day's pay).</div>
+      <div><b>Spending · 40%</b> Flexible categories against a weekly slice of their monthly budget. Fixed costs like rent only count if the month goes over.</div>
+      <div><b>Goals · 25%</b> Whether you're on pace for each goal's deadline, or its % of pay if it has no deadline.</div>
+      <div>Weeks run Monday to Sunday. Every point you score is XP, and every 500 XP is a level up.</div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== NET WORTH ===== -->
@@ -1801,83 +1081,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:14px">
       <div>
         <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Total net worth</div>
-        <div id="netWorthTotal" style="font-size:34px;font-weight:700;color:var(--text-primary);line-height:1.05;margin-top:2px">CHF 0</div>
+        <div id="netWorthTotal" style="font-size:34px;font-weight:700;color:var(--text-primary);line-height:1.05;margin-top:2px">$0</div>
         <div id="netWorthBreakdown" style="font-size:11px;color:var(--text-tertiary);margin-top:4px"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:11px;color:var(--text-tertiary)">CHF</span>
-        <select id="netWorthCurrency" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;cursor:pointer">
-          <option value="CHF">CHF</option>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="GBP">GBP</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Receipt scanner — drag a photo in, AI reads it, deduct from an account -->
-    <div class="card nw-subcard rcpt-card" id="rcptCard">
-      <div class="rcpt-head">
-        <div class="rcpt-head-title">
-          <span class="rcpt-emoji">🧾</span>
-          <div>
-            <div class="rcpt-t">Scan a receipt</div>
-            <div class="rcpt-s">Drag a photo in — a receipt to deduct, or a balance to set</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Drop zone (default) -->
-      <div class="rcpt-drop" id="rcptDrop" role="button" tabindex="0" aria-label="Upload a receipt photo">
-        <div class="rcpt-drop-icon">↗</div>
-        <div class="rcpt-drop-main">Drop a receipt here</div>
-        <div class="rcpt-drop-sub">or click to upload · paste with ⌘V</div>
-      </div>
-      <input type="file" id="rcptFile" accept="image/*" capture="environment" class="hidden" />
-
-      <!-- Busy state -->
-      <div class="rcpt-state hidden" id="rcptBusy">
-        <img class="rcpt-thumb" id="rcptThumb" alt="" />
-        <div class="rcpt-busy-text">Reading receipt<span class="rcpt-dots"></span></div>
-      </div>
-
-      <!-- Error -->
-      <div class="rcpt-error hidden" id="rcptError"></div>
-
-      <!-- Confirmation -->
-      <div class="rcpt-confirm hidden" id="rcptConfirm">
-        <div class="rcpt-confirm-top">
-          <img class="rcpt-thumb" id="rcptConfirmThumb" alt="" />
-          <div class="rcpt-fields">
-            <div class="rcpt-field full">
-              <label for="rcptMerchant">Merchant</label>
-              <input type="text" id="rcptMerchant" placeholder="Merchant" />
-            </div>
-            <div class="rcpt-field">
-              <label for="rcptTotal">Total</label>
-              <input type="text" inputmode="decimal" id="rcptTotal" class="mono" placeholder="0.00" />
-            </div>
-            <div class="rcpt-field">
-              <label for="rcptCurrency">Currency</label>
-              <select id="rcptCurrency">
-                <option value="CHF">CHF</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </select>
-            </div>
-            <div class="rcpt-field full">
-              <label for="rcptAccount">Deduct from</label>
-              <select id="rcptAccount"></select>
-            </div>
-          </div>
-        </div>
-        <div class="rcpt-items hidden" id="rcptItems"></div>
-        <div class="rcpt-hint" id="rcptHint"></div>
-        <div class="rcpt-actions">
-          <button type="button" class="rcpt-btn" id="rcptDiscard">Discard</button>
-          <button type="button" class="rcpt-btn rcpt-btn-apply" id="rcptApply">Apply</button>
-        </div>
       </div>
     </div>
 
@@ -1954,6 +1159,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         <select id="moneyAction" aria-label="Money action">
           <option value="add">Add money</option>
           <option value="transfer">Transfer</option>
+          <option value="transaction">Log transaction</option>
         </select>
         <select id="moneyFrom" aria-label="Money source">
           <option value="">Source account</option>
@@ -1961,6 +1167,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         <select id="moneyTo" aria-label="Money destination">
           <option value="">Destination account</option>
         </select>
+        <input type="text" id="moneyLabel" placeholder="Description" aria-label="Description" />
         <input type="number" id="moneyAmount" min="0" step="0.01" placeholder="Amount" aria-label="Amount" />
         <button type="button" class="money-actions-btn" id="moneyApplyBtn">Apply</button>
       </div>
@@ -2022,206 +1229,51 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </div>
 </div>
 
-<!-- ===== ACTIVE SUBSCRIPTIONS ===== -->
-<div class="section" data-section="subs">
-  <div class="section-title">
-    <span class="section-title-text">ACTIVE SUBSCRIPTIONS</span>
-  </div>
-  <div class="card" style="background:linear-gradient(135deg, rgba(83,74,183,0.07), rgba(216,90,48,0.05));border:1px solid rgba(83,74,183,0.20)">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:12px">
-      <div>
-        <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Monthly burn</div>
-        <div id="subsTotal" style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px">CHF 0 <span style="font-size:13px;color:var(--text-tertiary);font-weight:500">/ mo</span></div>
-        <div id="subsYearly" style="font-size:11px;color:var(--text-tertiary);margin-top:2px"></div>
-      </div>
-      <div id="subsCount" style="font-size:11px;color:var(--text-tertiary)"></div>
-    </div>
-    <div id="subsList"></div>
-    <div class="empty-state" id="subsEmpty">No subscriptions yet</div>
-    <div class="quick-add" style="flex-wrap:wrap;gap:6px">
-      <input type="text" placeholder="Service (e.g. Netflix)" id="subName" style="flex:1.5;min-width:120px" />
-      <input type="number" placeholder="Amount" id="subAmount" step="0.01" style="flex:1;max-width:100px" />
-      <select id="subCurrency" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);max-width:90px">
-        <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <select id="subPeriod" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);max-width:100px">
-        <option value="monthly">Monthly</option>
-        <option value="yearly">Yearly</option>
-        <option value="weekly">Weekly</option>
-      </select>
-      <label class="date-field" title="Next renewal date" style="min-width:150px"><span class="date-emoji" aria-hidden="true">📅</span><input type="date" id="subRenewal" /></label>
-      <select id="subFromCat" title="Which net worth account to deduct from" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);min-width:130px">
-        <option value="">No accounts yet</option>
-      </select>
-      <label class="sub-auto-toggle" title="Auto-deduct from the linked account on each renewal">
-        <input type="checkbox" id="subAutoDeduct" />
-        <span class="sub-auto-track"><span class="sub-auto-thumb"></span></span>
-        <span class="sub-auto-label">Auto-deduct</span>
-      </label>
-      <button class="quick-add-btn" id="subAddBtn" onclick="window.__addSub && window.__addSub()">+ Add</button>
-    </div>
-  </div>
-</div>
-
-<div class="section" data-section="subs">
-  <div class="section-title">
-    <span class="section-title-text">BILLS</span>
-  </div>
-  <div class="card bill-card">
-    <div class="bill-head">
-      <div>
-        <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Bills</div>
-        <div id="billsTotal" style="font-size:24px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px">CHF 0 <span style="font-size:12px;color:var(--text-tertiary);font-weight:500">/ mo</span></div>
-      </div>
-      <div id="billsCount" style="font-size:11px;color:var(--text-tertiary)"></div>
-    </div>
-    <div id="billsList"></div>
-    <div class="empty-state" id="billsEmpty">No bills yet</div>
-    <div class="bill-add-grid">
-      <input type="text" id="billName" placeholder="Bill name (e.g. Rent)" />
-      <input type="number" id="billAmount" min="0" step="0.01" placeholder="Amount" />
-      <select id="billCurrency" aria-label="Bill currency">
-        <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <input type="text" id="billDue" placeholder="Due date or note" />
-      <button type="button" class="bill-add-btn" id="billAddBtn">+ Add bill</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== INCOMING ORDERS ===== -->
-<div class="section" data-section="incoming">
-  <div class="section-title">
-    <span class="section-title-text">INCOMING ORDERS</span>
-  </div>
-
-  <!-- Add card with cost + currency + from-category + arrival date -->
-  <div class="card ord-add-card">
-    <div class="ord-add-eyebrow">+ NEW ORDER</div>
-    <div class="ord-add-grid">
-      <input type="text"   id="ordName"   placeholder="Item (e.g. New iPhone)" class="ord-input ord-input-name">
-      <input type="number" id="ordCost"   placeholder="Cost" step="0.01" class="ord-input ord-input-cost">
-      <select id="ordCurrency" class="ord-input ord-input-ccy">
-        <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <select id="ordFromCat" class="ord-input ord-input-from" title="Which net worth account this comes out of">
-        <option value="">No accounts yet</option>
-      </select>
-      <label class="date-field ord-input-date" title="Expected arrival"><span class="date-emoji" aria-hidden="true">📅</span><input type="date" id="ordArrival" /></label>
-      <button class="ord-add-btn" id="ordAddBtn" onclick="window.__addOrder && window.__addOrder()">+ Add Order</button>
-    </div>
-    <div class="ord-add-preview" id="ordAddPreview">Type a cost — preview will show what % of net worth it takes.</div>
-  </div>
-
-  <!-- Items list -->
-  <div class="ord-section-h">
-    <span class="ord-section-label">ITEMS ON THE WAY</span>
-    <span class="ord-section-count" id="ordCount">0 items</span>
-  </div>
-  <div id="ordList"></div>
-  <div class="ord-empty-card" id="ordEmpty">
-    <div class="ord-empty-icon">📦</div>
-    <div class="ord-empty-title">Nothing on the way</div>
-    <div class="ord-empty-sub">Log an order above. Pick the account it comes out of, the expected arrival date, and the dashboard will show what % of your net worth it costs.</div>
-  </div>
-</div>
-
-<!-- ===== WISHLIST ===== -->
-<div class="section" data-section="wish">
-  <div class="section-title">
-    <span class="section-title-text">WISHLIST</span>
-  </div>
-  <!-- Hero card with stats -->
-  <div class="card wish-hero">
-    <div class="wish-hero-top">
-      <div>
-        <div class="wish-hero-eyebrow">WISHLIST TOTAL</div>
-        <div class="wish-hero-num" id="wishTotal">CHF 0</div>
-      </div>
-      <div class="wish-hero-pct-wrap">
-        <div class="wish-hero-pct-label">% OF NET WORTH</div>
-        <div class="wish-hero-pct-num" id="wishPctOfNwHero">—</div>
-      </div>
-    </div>
-    <div class="wish-hero-bar">
-      <div class="wish-hero-bar-fill" id="wishHeroFill" style="width:0%"></div>
-    </div>
-    <div class="wish-hero-foot" id="wishPctOfNw">Add net worth first to see this as a %</div>
-  </div>
-
-  <!-- Add row -->
-  <div class="card wish-add-card">
-    <div class="wish-add-eyebrow">+ ADD AN ITEM</div>
-    <div class="wish-add-row">
-      <input type="text"   id="wishName"   placeholder="Item name (e.g. New iPhone Pro Max)" class="wish-input wish-input-name">
-      <input type="number" id="wishAmount" placeholder="Cost" step="0.01" class="wish-input wish-input-amt">
-      <select id="wishCurrency" class="wish-input wish-input-ccy">
-        <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-      </select>
-      <button class="wish-add-btn" id="wishAddBtn" onclick="window.__addWish && window.__addWish()">+ Add</button>
-    </div>
-  </div>
-
-  <!-- Items list -->
-  <div class="wish-section-h">
-    <span class="wish-section-label">YOUR WISHES</span>
-    <span class="wish-section-count" id="wishCount">0 items</span>
-  </div>
-  <div id="wishList"></div>
-  <div class="wish-empty-card" id="wishEmpty">
-    <div class="wish-empty-icon">🎯</div>
-    <div class="wish-empty-title">No wishes yet</div>
-    <div class="wish-empty-sub">Add anything you're saving for — the dashboard will calculate what % of your net worth it'd cost.</div>
-  </div>
-</div>
-
-<!-- ===== NOVA — AI money coach ===== -->
-<div class="section" data-section="nova" hidden>
-  <div class="section-title">
-    <span class="section-title-text">NOVA · MONEY COACH</span>
-  </div>
-  <div class="card" style="padding:0;overflow:hidden;background:#05060c">
-    <iframe src="nova-lite.html" title="Nova Lite AI money mentor" style="display:block;width:100%;height:680px;border:0;background:#05060c"></iframe>
-  </div>
-</div>
-
 </div>
 
 <!-- ===== BOTTOM TAB BAR ===== -->
 <nav class="bottom-tabs" id="bottomTabs" aria-label="Sections">
-  <button class="bot-tab active" data-tab="net">
+  <button class="bot-tab" data-tab="budget">
+    <span class="bot-tab-icon">🧮</span>
+    <span class="bot-tab-label">Budget</span>
+  </button>
+  <button class="bot-tab" data-tab="payday">
+    <span class="bot-tab-icon">💵</span>
+    <span class="bot-tab-label">Payday</span>
+  </button>
+  <button class="bot-tab" data-tab="score">
+    <span class="bot-tab-icon">🏆</span>
+    <span class="bot-tab-label">Score</span>
+  </button>
+  <button class="bot-tab" data-tab="net">
     <span class="bot-tab-icon">📊</span>
-    <span class="bot-tab-label">Net Worth</span>
+    <span class="bot-tab-label">Worth</span>
   </button>
-  <button class="bot-tab" data-tab="subs">
-    <span class="bot-tab-icon">🔁</span>
-    <span class="bot-tab-label">Subs</span>
-  </button>
-  <button class="bot-tab" data-tab="incoming">
-    <span class="bot-tab-icon">📦</span>
-    <span class="bot-tab-label">Orders</span>
-  </button>
-  <button class="bot-tab" data-tab="wish">
-    <span class="bot-tab-icon">🎯</span>
-    <span class="bot-tab-label">Wishlist</span>
-  </button>
-  <button class="bot-tab" data-tab="nova">
-    <span class="bot-tab-icon">✨</span>
-    <span class="bot-tab-label">Nova</span>
-  </button>
+  <button type="button" class="coach-bubble" id="coachBubble" aria-label="Open your budget coach" aria-expanded="false" aria-controls="coachPanel">✨<span class="coach-dot" hidden></span></button>
 </nav>
+
+<!-- ===== BUDGET COACH — pops up from the ✨ bubble (coach.js) ===== -->
+<div class="coach-panel" id="coachPanel" role="dialog" aria-labelledby="coachTitle" hidden>
+  <div class="coach-head">
+    <div><div class="coach-title" id="coachTitle">✨ Budget coach</div><div class="coach-date" id="coachDate"></div></div>
+    <button type="button" class="coach-close" id="coachClose" aria-label="Close the coach">×</button>
+  </div>
+  <div class="coach-body">
+    <section>
+      <div class="coach-eyebrow">Today</div>
+      <ul class="coach-bullets" id="coachToday"></ul>
+      <div class="coach-src" id="coachTodaySrc"></div>
+    </section>
+    <section>
+      <div class="coach-eyebrow">Savings autopilot</div>
+      <div id="coachPlan"></div>
+    </section>
+    <section>
+      <div class="coach-row"><div class="coach-eyebrow">Spending analysis</div><button type="button" class="bg-btn bg-btn-sm" id="coachAnalyze">Analyze my spending</button></div>
+      <div id="coachAnalysis"></div>
+    </section>
+  </div>
+</div>
 
 <script>
 (function() {
@@ -2239,21 +1291,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   // ============================================================
-  // ORD_FROM_META — must be hoisted to the top of the IIFE.
-  // renderOrders runs as part of the FIRST renderAllNetWorth call
-  // (long before the ORDERS section is reached) and will TDZ-crash
-  // the whole script if any saved orders trigger the render path
-  // and ORD_FROM_META hasn't been initialized yet.
-  // ============================================================
-  const ORD_FROM_META = {
-    bank:   { name: 'Bank',   color: '#7DD3FC' },
-    stocks: { name: 'Stocks', color: '#6EE7B7' },
-    crypto: { name: 'Crypto', color: '#FBBF24' },
-    other:  { name: 'Other',  color: '#B794F4' }
-  };
-
-  // ============================================================
-  // BOTTOM TABS — switch between Net Worth / Subs / Orders.
+  // BOTTOM TABS — switch between Budget / Payday / Score / Net Worth.
   // Active tab persisted in localStorage.
   // ============================================================
   const TAB_KEY = 'finance_active_tab';
@@ -2266,50 +1304,30 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       else s.setAttribute('hidden', '');
     });
     storeSet(TAB_KEY, name);
+    window.dispatchEvent(new CustomEvent('finance:tab', { detail: name }));
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   tabs.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
   const savedTab = storeGet(TAB_KEY);
-  setActiveTab(savedTab && ['net','subs','incoming','wish','nova'].includes(savedTab) ? savedTab : 'net');
+  setActiveTab(savedTab && ['budget','payday','score','net'].includes(savedTab) ? savedTab : 'budget');
 
   // ============================================================
   // NET WORTH (copied from the main dashboard, verbatim logic)
   // ============================================================
-  const CURRENCY_KEY = 'nw_currency';
   const NW_CATS = [
     { key: 'bank',   listId: 'bankList',   totalId: 'bankTotal',   nameId: 'bankName',   amtId: 'bankAmount',   addId: 'bankAddBtn' },
     { key: 'stocks', listId: 'stocksList', totalId: 'stocksTotal', nameId: 'stocksName', amtId: 'stocksAmount', addId: 'stocksAddBtn' },
     { key: 'crypto', listId: 'cryptoList', totalId: 'cryptoTotal', nameId: 'cryptoName', amtId: 'cryptoAmount', addId: 'cryptoAddBtn' },
     { key: 'other',  listId: 'otherList',  totalId: 'otherTotal',  nameId: 'otherName',  amtId: 'otherAmount',  addId: 'otherAddBtn' }
   ];
-  const currencyEl = document.getElementById('netWorthCurrency');
   const netWorthTotal = document.getElementById('netWorthTotal');
   const netWorthBreakdown = document.getElementById('netWorthBreakdown');
 
-  let exchangeRates = { CHF: 1, USD: 1, EUR: 1, GBP: 1 };
-  async function loadExchangeRates() {
-    try {
-      const res = await fetch('https://open.er-api.com/v6/latest/CHF');
-      const data = await res.json();
-      if (data && data.rates) {
-        exchangeRates = {
-          CHF: 1,
-          USD: data.rates.USD || 1,
-          EUR: data.rates.EUR || 1,
-          GBP: data.rates.GBP || 1
-        };
-        renderAllNetWorth();
-        if (typeof renderSubs === 'function') renderSubs();
-      }
-    } catch (e) {}
-  }
-  loadExchangeRates();
-
-  function fmtMoney(amountCHF) {
-    const symbol = currencyEl ? currencyEl.value : 'CHF';
-    const rate = exchangeRates[symbol] || 1;
-    const num = (Number(amountCHF) || 0) * rate;
-    return symbol + ' ' + num.toLocaleString('en-US', { minimumFractionDigits: num % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+  const usdFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const usdFormatCents = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function fmtMoney(amount) {
+    const num = Math.round((Number(amount) || 0) * 100) / 100;
+    return (num % 1 === 0 ? usdFormat : usdFormatCents).format(num);
   }
 
   function renderNetWorthCategory(cat) {
@@ -2348,10 +1366,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   function beginNwAmountEdit(amtEl, items, idx, catKey) {
     if (amtEl.querySelector('input')) return;
-    const symbol = currencyEl ? currencyEl.value : 'CHF';
-    const rate = exchangeRates[symbol] || 1;
-    const curCHF = Number(items[idx].amount) || 0;
-    const curDisplay = curCHF * rate;
+    const curUSD = Number(items[idx].amount) || 0;
+    const curDisplay = curUSD;
     const input = document.createElement('input');
     input.type = 'text';
     input.inputMode = 'decimal';
@@ -2365,7 +1381,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       if (saved) return; saved = true;
       const v = input.value.trim();
       if (v === '') { renderAllNetWorth(); return; }
-      // Input is in the DISPLAY currency. Convert back to CHF before storing.
       let nextDisplay = curDisplay;
       if (/^[+\-]\s*\d/.test(v)) {
         const delta = parseFloat(v.replace(/\s+/g, ''));
@@ -2375,12 +1390,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         if (!isNaN(n)) nextDisplay = n;
       }
       if (nextDisplay < 0) nextDisplay = 0;
-      const nextCHF = nextDisplay / rate;
-      const deltaCHF = nextCHF - curCHF;
-      items[idx].amount = nextCHF;
+      const nextUSD = nextDisplay;
+      const deltaUSD = nextUSD - curUSD;
+      items[idx].amount = nextUSD;
       storeSet('nw:' + catKey, items);
-      if (Math.abs(deltaCHF) > 0.005) {
-        logActivity(catKey, items[idx].name, deltaCHF, 'edit');
+      if (Math.abs(deltaUSD) > 0.005) {
+        logActivity(catKey, items[idx].name, deltaUSD, 'edit');
       }
       renderAllNetWorth();
     }
@@ -2430,20 +1445,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     renderNetWorthChart();
     renderAllocationDonut(sliceTotals, grand);
     renderActivity();
-    if (typeof renderWishlist === 'function') renderWishlist();
-    if (typeof renderOrders   === 'function') renderOrders();
-    if (typeof updateOrdPreview === 'function') updateOrdPreview();
+    window.dispatchEvent(new Event('finance:changed'));
   }
 
   // ============================================================
-  // ACTIVITY LOG — every add / edit / delete with delta in CHF.
+  // ACTIVITY LOG — every add / edit / delete with delta in USD.
   // Renders newest first. Cap at 50.
   // ============================================================
   const ACTIVITY_KEY = 'nw:activity';
   const ACTIVITY_MAX = 50;
-  function logActivity(catKey, name, deltaCHF, kind) {
+  function logActivity(catKey, name, deltaUSD, kind) {
     const arr = storeGet(ACTIVITY_KEY) || [];
-    arr.push({ ts: Date.now(), cat: catKey, name: String(name || ''), delta: Number(deltaCHF) || 0, kind: kind || 'add' });
+    arr.push({ ts: Date.now(), cat: catKey, name: String(name || ''), delta: Number(deltaUSD) || 0, kind: kind || 'add' });
     if (arr.length > ACTIVITY_MAX) arr.splice(0, arr.length - ACTIVITY_MAX);
     storeSet(ACTIVITY_KEY, arr);
   }
@@ -2494,16 +1507,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   // ============================================================
-  // ALLOCATION DONUT — pie chart of where money lives + annual subs
-  // burn (so you can see how much subs are eating vs your assets).
-  // Each NW category gets a fixed color; subs get red because outflow.
+  // ALLOCATION DONUT — pie chart of where money lives.
+  // Each NW category gets a fixed color.
   // ============================================================
   const NW_SLICE_META = {
     bank:   { name: 'Bank',     color: '#7DD3FC' },
     stocks: { name: 'Stocks',   color: '#6EE7B7' },
     crypto: { name: 'Crypto',   color: '#FBBF24' },
     other:  { name: 'Other',    color: '#B794F4' },
-    subs:   { name: 'Subs/yr',  color: '#FF8A8A' }
+
   };
   function donutArcPath(cx, cy, rOuter, rInner, startAngle, endAngle) {
     const x1o = cx + rOuter * Math.cos(startAngle);
@@ -2549,13 +1561,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         }
       });
     });
-    // Subs annualized — one aggregate slice (no per-sub breakdown here).
-    const subItems = storeGet('subs') || [];
-    const annualSubsCHF = subItems.reduce((s, it) => s + monthlyEquivalent(it) * 12, 0);
-    if (annualSubsCHF > 0) {
-      const meta = NW_SLICE_META.subs;
-      slices.push({ key: 'subs', name: meta.name, color: meta.color, value: annualSubsCHF });
-    }
 
     const sliceTotal = slices.reduce((s, x) => s + x.value, 0);
 
@@ -2601,8 +1606,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // Net-worth history chart
   const NW_HISTORY_KEY = 'nw:history';
   const NW_HISTORY_MAX = 500;
-  function logNetWorthSnapshot(grandCHF) {
-    const v = Number(grandCHF) || 0;
+  function logNetWorthSnapshot(grandUSD) {
+    const v = Number(grandUSD) || 0;
     const hist = storeGet(NW_HISTORY_KEY) || [];
     const last = hist[hist.length - 1];
     if (last && Math.abs((last.v || 0) - v) < 0.005) return;
@@ -2694,7 +1699,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   // Stats overlay — what 1% is worth, all-time high/low, snapshot count.
-  // Reads the snapshot history (CHF base) and converts to display currency.
+  // Reads the snapshot history (USD) and converts to display currency.
   function renderChartStats(hist) {
     const oneEl   = document.getElementById('nwStat1pct');
     const highEl  = document.getElementById('nwStatHigh');
@@ -2727,16 +1732,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const n = nameInput.value.trim();
       const a = parseFloat(amtInput.value);
       if (!n || isNaN(a)) return;
-      // Interpret the input in the CURRENTLY SELECTED display currency, then
-      // convert to CHF for storage. So if USD is selected and user types 40000,
-      // we store 40000 / USD-per-CHF rate — 31,400 CHF; displays as $40,000.
-      const symbol = currencyEl ? currencyEl.value : 'CHF';
-      const rate = exchangeRates[symbol] || 1;
-      const amountCHF = a / rate;
+      const amountUSD = a;
       const items = storeGet('nw:' + cat.key) || [];
-      items.push({ name: n, amount: amountCHF });
+      items.push({ name: n, amount: amountUSD });
       storeSet('nw:' + cat.key, items);
-      logActivity(cat.key, n, amountCHF, 'add');
+      logActivity(cat.key, n, amountUSD, 'add');
       nameInput.value = ''; amtInput.value = '';
       renderAllNetWorth();
     }
@@ -2745,598 +1745,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     amtInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
   });
 
-  if (currencyEl) {
-    const savedCur = storeGet(CURRENCY_KEY);
-    if (savedCur) currencyEl.value = savedCur;
-    currencyEl.addEventListener('change', () => {
-      storeSet(CURRENCY_KEY, currencyEl.value);
-      renderAllNetWorth();
-      renderSubs();
-    });
-  }
   renderAllNetWorth();
 
-  // ============================================================
-  // SUBSCRIPTIONS
-  // ============================================================
-  const subsList = document.getElementById('subsList');
-  const subsEmpty = document.getElementById('subsEmpty');
-  const subsTotal = document.getElementById('subsTotal');
-  const subsYearly = document.getElementById('subsYearly');
-  const subsCount = document.getElementById('subsCount');
-  const subAddBtn = document.getElementById('subAddBtn');
-  const subName = document.getElementById('subName');
-  const subAmount = document.getElementById('subAmount');
-  const subPeriod = document.getElementById('subPeriod');
-
-  function monthlyEquivalent(item) {
-    const a = Number(item.amount) || 0;
-    if (item.period === 'yearly') return a / 12;
-    if (item.period === 'weekly') return a * 4.345;
-    return a;
-  }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
-  function formatRenewal(iso) {
-    if (!iso) return '';
-    const isoSafe = (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso + 'T00:00' : iso;
-    const d = new Date(isoSafe);
-    if (isNaN(d)) return iso;
-    const now = new Date();
-    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffDays = Math.round((dayStart - todayStart) / (1000 * 60 * 60 * 24));
-    const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    let prefix = '';
-    if (diffDays < 0) prefix = 'past · ';
-    else if (diffDays === 0) prefix = 'today · ';
-    else if (diffDays === 1) prefix = 'tomorrow · ';
-    else if (diffDays <= 7) prefix = 'in ' + diffDays + 'd · ';
-    return prefix + dateLabel;
-  }
 
-  function renderSubs() {
-    renderBills();
-    if (!subsList) return;
-    // Auto-deduct any matured renewals before painting
-    processAutoDeductSubs();
-    // Keep the From-account dropdown synced with current NW accounts
-    populateSubFromSelect();
-    const items = storeGet('subs') || [];
-    subsList.innerHTML = '';
-    if (!items.length) {
-      subsEmpty.style.display = 'flex';
-      subsTotal.innerHTML = fmtMoney(0) + ' <span style="font-size:13px;color:var(--text-tertiary);font-weight:500">/ mo</span>';
-      subsYearly.textContent = '';
-      subsCount.textContent = '';
-      return;
-    }
-    subsEmpty.style.display = 'none';
-    let monthly = 0;
-    items.forEach((it, idx) => {
-      const m = monthlyEquivalent(it);
-      monthly += m;
-      // Days until next renewal (rolls past dates forward by the period so
-      // a "Renews Apr 28 · monthly" sub shows the *next* upcoming renewal).
-      let daysToRenew = null;
-      if (it.renewal && typeof nextRenewalDate === 'function') {
-        const next = nextRenewalDate(it.renewal, it.period);
-        if (next) {
-          const now = new Date();
-          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-          daysToRenew = Math.round((next.getTime() - today) / 86400000);
-        }
-      }
-      const isUrgent = daysToRenew != null && daysToRenew <= 5;
-      const row = document.createElement('div');
-      row.className = 'sub-row' + (isUrgent ? ' is-urgent' : '');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:12px 14px;background:rgba(255,255,255,0.025);border-radius:var(--radius-md);margin-bottom:8px;gap:12px;';
-      const renewLine = it.renewal
-        ? '<div class="sub-renew-line" style="font-size:10px;color:#F2C063;margin-top:3px">↻ Renews ' + formatRenewal(it.renewal) + '</div>'
-        : '';
-      // Linked NW account + auto-deduct toggle pills
-      let metaLine = '';
-      const pills = [];
-      if (it.fromCat && it.fromAccount) {
-        pills.push('<span class="sub-from-pill">from · ' + escapeHtml(it.fromAccount) + '</span>');
-      }
-      pills.push(
-        '<button class="sub-row-toggle' + (it.autoDeduct ? ' is-on' : '') + '" data-sub-toggle="' + idx + '" type="button" title="Auto-deduct from the linked account on each renewal">'
-        + '<span class="sub-row-toggle-dot"></span>'
-        + (it.autoDeduct ? 'Auto-deduct ON' : 'Auto-deduct off')
-        + '</button>'
-      );
-      metaLine = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' + pills.join('') + '</div>';
-
-      const left = document.createElement('div');
-      left.style.cssText = 'min-width:0';
-      left.innerHTML = '<div style="font-weight:600;color:var(--text-primary);font-size:14px">' + escapeHtml(it.name) + '</div>' +
-        '<div style="font-size:11px;color:var(--text-tertiary);margin-top:2px;text-transform:capitalize">' + it.period + '</div>' +
-        renewLine +
-        metaLine;
-      const cost = document.createElement('div');
-      cost.style.cssText = 'text-align:right;line-height:1.1';
-      const bigNum = fmtMoney(m);
-      const origHint = (it.entered_currency && it.entered_currency !== 'CHF' && it.entered_amount != null)
-        ? '<div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">billed ' + it.entered_currency + ' ' + Number(it.entered_amount).toLocaleString('en-US', { minimumFractionDigits: it.entered_amount % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 }) + ' / ' + it.period + '</div>'
-        : (it.period !== 'monthly'
-            ? '<div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">billed ' + fmtMoney(it.amount) + ' / ' + it.period + '</div>'
-            : '');
-      cost.innerHTML = '<div style="font-size:20px;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums">' + bigNum + '</div>' +
-        '<div style="font-size:10px;color:var(--text-tertiary);margin-top:1px">/ month</div>' +
-        origHint;
-      const actions = document.createElement('div');
-      actions.style.cssText = 'display:flex;flex-direction:column;gap:4px;align-items:center';
-      const editBtn = document.createElement('button');
-      editBtn.title = 'Edit';
-      editBtn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:3px 7px;border-radius:5px;font-family:inherit;line-height:1';
-      editBtn.textContent = '✏';
-      editBtn.addEventListener('click', () => editSubInline(idx));
-      const del = document.createElement('button');
-      del.title = 'Delete';
-      del.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:3px 7px;border-radius:5px;font-family:inherit;line-height:1';
-      del.textContent = '×';
-      del.addEventListener('click', () => {
-        if (!confirm('Delete "' + it.name + '"?')) return;
-        items.splice(idx, 1); storeSet('subs', items); renderSubs();
-      });
-      actions.appendChild(editBtn);
-      actions.appendChild(del);
-      row.appendChild(left); row.appendChild(cost); row.appendChild(actions);
-      subsList.appendChild(row);
-    });
-    // Wire row-level auto-deduct toggle buttons
-    subsList.querySelectorAll('[data-sub-toggle]').forEach(b => {
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const i = parseInt(b.dataset.subToggle, 10);
-        const arr = storeGet('subs') || [];
-        if (!arr[i]) return;
-        if (!arr[i].autoDeduct && (!arr[i].fromCat || !arr[i].fromAccount)) {
-          alert('Pick a "From account" first (use the ✏ edit button) so the deduction knows where to take the money from.');
-          return;
-        }
-        arr[i].autoDeduct = !arr[i].autoDeduct;
-        storeSet('subs', arr);
-        renderSubs();
-      });
-    });
-    subsTotal.innerHTML = fmtMoney(monthly) + ' <span style="font-size:13px;color:var(--text-tertiary);font-weight:500">/ mo</span>';
-    subsYearly.textContent = '~' + fmtMoney(monthly * 12) + ' per year';
-    subsCount.textContent = items.length + (items.length === 1 ? ' subscription' : ' subscriptions');
-    // Re-render the donut so the subs slice updates with the latest annualized total
-    if (typeof renderAllNetWorth === 'function') renderAllNetWorth();
-  }
-
-  function renderBills() {
-    const list = document.getElementById('billsList');
-    const empty = document.getElementById('billsEmpty');
-    const totalEl = document.getElementById('billsTotal');
-    const countEl = document.getElementById('billsCount');
-    if (!list) return;
-    const items = storeGet('bills') || [];
-    const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    if (totalEl) totalEl.innerHTML = fmtMoney(total) + ' <span style="font-size:12px;color:var(--text-tertiary);font-weight:500">/ mo</span>';
-    if (countEl) countEl.textContent = items.length + (items.length === 1 ? ' bill' : ' bills');
-    list.innerHTML = '';
-    if (!items.length) {
-      if (empty) empty.style.display = 'flex';
-      return;
-    }
-    if (empty) empty.style.display = 'none';
-    items.forEach((item, idx) => {
-      const row = document.createElement('div');
-      row.className = 'bill-row';
-      const due = item.due ? 'due ' + item.due : 'monthly bill';
-      row.innerHTML = '<div><div class="bill-name">' + escapeHtml(item.name) + '</div><div class="bill-meta">' + escapeHtml(due) + '</div></div>'
-        + '<div class="bill-amount">' + fmtMoney(item.amount) + '</div>'
-        + '<button type="button" class="bill-delete" aria-label="Delete ' + escapeHtml(item.name) + '">×</button>';
-      row.querySelector('.bill-delete').addEventListener('click', () => {
-        const next = storeGet('bills') || [];
-        next.splice(idx, 1);
-        storeSet('bills', next);
-        renderBills();
-      });
-      list.appendChild(row);
-    });
-  }
-  function doBillAdd() {
-    const nameEl = document.getElementById('billName');
-    const amountEl = document.getElementById('billAmount');
-    const currencyBillEl = document.getElementById('billCurrency');
-    const dueEl = document.getElementById('billDue');
-    if (!nameEl || !amountEl) return;
-    const name = nameEl.value.trim();
-    const enteredAmount = parseFloat(amountEl.value);
-    if (!name || !(enteredAmount > 0)) { nameEl.focus(); return; }
-    const enteredCurrency = currencyBillEl ? currencyBillEl.value : 'CHF';
-    const amountCHF = enteredAmount / (exchangeRates[enteredCurrency] || 1);
-    const items = storeGet('bills') || [];
-    items.push({ name, amount: amountCHF, entered_amount: enteredAmount, entered_currency: enteredCurrency, due: dueEl ? dueEl.value.trim() : '' });
-    storeSet('bills', items);
-    nameEl.value = '';
-    amountEl.value = '';
-    if (dueEl) dueEl.value = '';
-    renderBills();
-  }
-  const billAddBtn = document.getElementById('billAddBtn');
-  if (billAddBtn) billAddBtn.addEventListener('click', doBillAdd);
-  ['billName', 'billAmount', 'billDue'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') doBillAdd(); });
-  });
-
-  // ============================================================
-  // Build/refresh the From-account dropdown in the subs add form,
-  // mirroring the same source-of-truth used by the orders form.
-  // ============================================================
-  function populateSubFromSelect() {
-    const sel = document.getElementById('subFromCat');
-    if (!sel) return;
-    const prev = sel.value;
-    const accounts = (typeof listAllNwAccounts === 'function') ? listAllNwAccounts() : [];
-    const ICONS = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
-    if (!accounts.length) {
-      sel.innerHTML = '<option value="">No accounts yet</option>';
-      sel.disabled = true;
-      return;
-    }
-    sel.disabled = false;
-    sel.innerHTML = accounts.map(a => {
-      const value = a.catKey + '::' + a.itemName;
-      return '<option value="' + value + '">' + ICONS[a.catKey] + ' ' + escapeHtml(a.itemName) + '</option>';
-    }).join('');
-    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
-  }
-
-  // ============================================================
-  // AUTO-DEDUCT — runs every time subs are rendered. For each sub
-  // whose autoDeduct is ON and whose renewal date has arrived (or
-  // passed), subtract the bill from the linked NW account, log the
-  // activity, and roll the renewal date forward to the next cycle.
-  // Idempotent via `lastDeductedAt` so refreshing the page doesn't
-  // double-charge.
-  // ============================================================
-  function processAutoDeductSubs() {
-    const items = storeGet('subs') || [];
-    if (!items.length) return false;
-    const now = new Date();
-    const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    let changed = false;
-    items.forEach(it => {
-      if (!it.autoDeduct || !it.renewal || !it.fromCat || !it.fromAccount) return;
-      const isoSafe = (typeof it.renewal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(it.renewal)) ? it.renewal + 'T00:00' : it.renewal;
-      let renewalDate = new Date(isoSafe);
-      if (isNaN(renewalDate)) return;
-      let safety = 0;
-      while (renewalDate.getTime() <= todayMs && safety++ < 200) {
-        const renewalMs = new Date(renewalDate.getFullYear(), renewalDate.getMonth(), renewalDate.getDate()).getTime();
-        if (!(it.lastDeductedAt && it.lastDeductedAt >= renewalMs)) {
-          const nwItems = storeGet('nw:' + it.fromCat) || [];
-          const idx = nwItems.findIndex(x => String(x.name) === String(it.fromAccount));
-          if (idx < 0) break;
-          const cost = Number(it.amount) || 0;
-          nwItems[idx].amount = (Number(nwItems[idx].amount) || 0) - cost;
-          storeSet('nw:' + it.fromCat, nwItems);
-          logActivity(it.fromCat, nwItems[idx].name, -cost, 'edit');
-          it.lastDeductedAt = renewalMs;
-          changed = true;
-        }
-        if (it.period === 'weekly') renewalDate.setDate(renewalDate.getDate() + 7);
-        else if (it.period === 'yearly') renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-        else renewalDate.setMonth(renewalDate.getMonth() + 1);
-      }
-      const newRenewal = renewalDate.getFullYear() + '-' + String(renewalDate.getMonth() + 1).padStart(2, '0') + '-' + String(renewalDate.getDate()).padStart(2, '0');
-      if (newRenewal !== it.renewal) {
-        it.renewal = newRenewal;
-        changed = true;
-      }
-    });
-    if (changed) storeSet('subs', items);
-    return changed;
-  }
-
-  function editSubInline(idx) {
-    const items = storeGet('subs') || [];
-    const it = items[idx];
-    if (!it) return;
-    const rows = subsList.querySelectorAll('.sub-row');
-    const row = rows[idx];
-    if (!row) return;
-    const enteredCcy = it.entered_currency || 'CHF';
-    const enteredAmt = it.entered_amount != null ? it.entered_amount : it.amount;
-    const periodOpts = ['monthly','yearly','weekly'].map(p =>
-      '<option value="' + p + '"' + (p === it.period ? ' selected' : '') + '>' + p.charAt(0).toUpperCase() + p.slice(1) + '</option>'
-    ).join('');
-    const ccyOpts = ['CHF','USD','EUR','GBP'].map(c =>
-      '<option value="' + c + '"' + (c === enteredCcy ? ' selected' : '') + '>' + c + '</option>'
-    ).join('');
-    // Build From-account options from the live NW accounts
-    const accounts = (typeof listAllNwAccounts === 'function') ? listAllNwAccounts() : [];
-    const ICONS = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
-    const currentFrom = (it.fromCat && it.fromAccount) ? (it.fromCat + '::' + it.fromAccount) : '';
-    const fromOpts = '<option value="">No account linked</option>' + accounts.map(a => {
-      const v = a.catKey + '::' + a.itemName;
-      return '<option value="' + v + '"' + (v === currentFrom ? ' selected' : '') + '>' + ICONS[a.catKey] + ' ' + escapeHtml(a.itemName) + '</option>';
-    }).join('');
-    row.innerHTML = '';
-    row.style.gridTemplateColumns = '1fr';
-    row.style.padding = '14px';
-    const form = document.createElement('div');
-    form.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center';
-    form.innerHTML =
-      '<input type="text" class="se-name" value="' + escapeHtml(it.name) + '" style="flex:1.5;min-width:120px;padding:6px 10px;border:0.5px solid rgba(255,255,255,0.10);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)" />' +
-      '<input type="number" step="0.01" class="se-amt" value="' + Number(enteredAmt).toFixed(2) + '" style="width:90px;padding:6px 10px;border:0.5px solid rgba(255,255,255,0.10);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)" />' +
-      '<select class="se-ccy" style="padding:6px 10px;border:0.5px solid rgba(255,255,255,0.10);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)">' + ccyOpts + '</select>' +
-      '<select class="se-per" style="padding:6px 10px;border:0.5px solid rgba(255,255,255,0.10);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)">' + periodOpts + '</select>' +
-      '<label class="date-field" style="min-width:140px"><span class="date-emoji" aria-hidden="true">📅</span><input type="date" class="se-ren" value="' + (it.renewal && /^\d{4}-\d{2}-\d{2}/.test(it.renewal) ? it.renewal.slice(0,10) : '') + '" /></label>' +
-      '<select class="se-from" style="padding:6px 10px;border:0.5px solid rgba(255,255,255,0.10);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);min-width:130px">' + fromOpts + '</select>' +
-      '<label class="sub-auto-toggle" style="padding:6px 10px"><input type="checkbox" class="se-auto"' + (it.autoDeduct ? ' checked' : '') + ' /><span class="sub-auto-track"><span class="sub-auto-thumb"></span></span><span class="sub-auto-label">Auto-deduct</span></label>' +
-      '<button class="se-save quick-add-btn">Save</button>' +
-      '<button class="se-cancel" style="background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:6px 10px;border-radius:var(--radius-md);font-family:inherit">Cancel</button>';
-    row.appendChild(form);
-    const save = () => {
-      const newName = row.querySelector('.se-name').value.trim();
-      const newAmtRaw = parseFloat(row.querySelector('.se-amt').value);
-      const newCcy = row.querySelector('.se-ccy').value;
-      const newPer = row.querySelector('.se-per').value;
-      const newRen = row.querySelector('.se-ren').value || null;
-      const newFromVal = row.querySelector('.se-from').value;
-      const newAuto = row.querySelector('.se-auto').checked;
-      let newFromCat = null, newFromAccount = null;
-      if (newFromVal) {
-        const ix = newFromVal.indexOf('::');
-        if (ix > 0) { newFromCat = newFromVal.slice(0, ix); newFromAccount = newFromVal.slice(ix + 2); }
-      }
-      if (newAuto && (!newFromCat || !newFromAccount)) {
-        alert('Pick a "From account" — auto-deduct needs somewhere to take the money from.');
-        return;
-      }
-      if (!newName || isNaN(newAmtRaw)) return;
-      const rate = exchangeRates[newCcy] || 1;
-      items[idx] = { ...it, name: newName, amount: newAmtRaw / rate, period: newPer, renewal: newRen, entered_amount: newAmtRaw, entered_currency: newCcy, fromCat: newFromCat, fromAccount: newFromAccount, autoDeduct: newAuto };
-      storeSet('subs', items); renderSubs();
-    };
-    const cancel = () => renderSubs();
-    row.querySelector('.se-save').addEventListener('click', save);
-    row.querySelector('.se-cancel').addEventListener('click', cancel);
-    row.querySelectorAll('input').forEach(i => {
-      i.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') save();
-        else if (e.key === 'Escape') cancel();
-      });
-    });
-    row.querySelector('.se-name').focus();
-  }
-
-  function doSubAdd() {
-    try {
-      const nEl = document.getElementById('subName');
-      const aEl = document.getElementById('subAmount');
-      const ccEl = document.getElementById('subCurrency');
-      const pEl = document.getElementById('subPeriod');
-      const rEl = document.getElementById('subRenewal');
-      const fEl = document.getElementById('subFromCat');
-      const tEl = document.getElementById('subAutoDeduct');
-      if (!nEl || !aEl) return;
-      const n = (nEl.value || '').trim();
-      const aRaw = parseFloat(aEl.value);
-      if (!n || isNaN(aRaw)) { nEl.focus(); return; }
-      const enteredCcy = ccEl ? ccEl.value : 'CHF';
-      const rate = exchangeRates[enteredCcy] || 1;
-      const amountCHF = aRaw / rate;
-      // Parse "From" selection — value is "catKey::accountName"
-      let fromCat = null, fromAccount = null;
-      if (fEl && fEl.value) {
-        const ix = fEl.value.indexOf('::');
-        if (ix > 0) { fromCat = fEl.value.slice(0, ix); fromAccount = fEl.value.slice(ix + 2); }
-      }
-      const autoDeduct = !!(tEl && tEl.checked);
-      // Guard: auto-deduct requires a linked account
-      if (autoDeduct && (!fromCat || !fromAccount)) {
-        alert('Pick a "From account" first — auto-deduct needs to know where to take the money from.');
-        return;
-      }
-      const items = storeGet('subs') || [];
-      items.push({
-        name: n, amount: amountCHF,
-        period: pEl ? pEl.value : 'monthly',
-        renewal: rEl && rEl.value ? rEl.value : null,
-        entered_amount: aRaw,
-        entered_currency: enteredCcy,
-        fromCat: fromCat,
-        fromAccount: fromAccount,
-        autoDeduct: autoDeduct,
-        lastDeductedAt: null
-      });
-      storeSet('subs', items);
-      nEl.value = ''; aEl.value = '';
-      if (rEl) rEl.value = '';
-      if (tEl) tEl.checked = false;
-      renderSubs();
-    } catch (e) { console.error('subAdd failed', e); }
-  }
-  // Add button uses event delegation (see safety-net at the bottom).
-  // Enter key on the inputs still triggers add directly.
-  if (subName)   subName.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSubAdd(); });
-  if (subAmount) subAmount.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSubAdd(); });
-  renderSubs();
-
-  // ============================================================
-  // WISHLIST — items with % of net worth.
-  // Each item is { name, amountCHF, ts, ccy }. Stored in 'wishlist'.
-  // Colors: <5% green, 5-25% amber, >25% red.
-  // ============================================================
-  // NOTE: don't use consts here — renderWishlist gets called from inside
-  // renderAllNetWorth which runs BEFORE this section's code (temporal dead
-  // zone). All DOM lookups happen inside the function body instead.
-  function nwGrandCHF() {
-    let g = 0;
-    NW_CATS.forEach(cat => {
-      const items = storeGet('nw:' + cat.key) || [];
-      items.forEach(it => { g += Number(it.amount) || 0; });
-    });
-    return g;
-  }
-  function pctClass(pct) {
-    if (pct < 5)  return 'good';
-    if (pct < 25) return 'warn';
-    return 'bad';
-  }
-  function renderWishlist() {
-    const wishList    = document.getElementById('wishList');
-    const wishEmpty   = document.getElementById('wishEmpty');
-    const wishTotalEl = document.getElementById('wishTotal');
-    const wishPctEl   = document.getElementById('wishPctOfNw');
-    const wishCountEl = document.getElementById('wishCount');
-    const heroPctEl   = document.getElementById('wishPctOfNwHero');
-    const heroFill    = document.getElementById('wishHeroFill');
-    if (!wishList) return;
-    const items = storeGet('wishlist') || [];
-    const grand = nwGrandCHF();
-    let total = 0;
-    items.forEach(it => { total += Number(it.amount) || 0; });
-
-    // Hero: total + huge % + color-coded
-    if (wishTotalEl) wishTotalEl.textContent = fmtMoney(total);
-    if (grand > 0) {
-      const pct = (total / grand) * 100;
-      const cls = pctClass(pct);
-      if (heroPctEl) {
-        heroPctEl.textContent = pct.toFixed(2) + '%';
-        heroPctEl.className = 'wish-hero-pct-num' + (cls === 'good' ? '' : (cls === 'warn' ? ' warn' : ' bad'));
-      }
-      if (heroFill) heroFill.style.width = Math.min(100, pct) + '%';
-      if (wishPctEl) wishPctEl.textContent = 'Your wishlist is ' + pct.toFixed(2) + '% of your ' + fmtMoney(grand) + ' net worth';
-    } else {
-      if (heroPctEl) { heroPctEl.textContent = '—'; heroPctEl.className = 'wish-hero-pct-num'; }
-      if (heroFill) heroFill.style.width = '0%';
-      if (wishPctEl) wishPctEl.textContent = 'Add accounts in Net Worth first to see this as a %';
-    }
-    if (wishCountEl) wishCountEl.textContent = items.length + (items.length === 1 ? ' item' : ' items');
-
-    wishList.innerHTML = '';
-    if (!items.length) { if (wishEmpty) wishEmpty.classList.remove('hidden'); return; }
-    if (wishEmpty) wishEmpty.classList.add('hidden');
-
-    // Sort largest first so the biggest dreams sit at the top
-    items.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).forEach((it) => {
-      const idx = items.indexOf(it);
-      const cost = Number(it.amount) || 0;
-      const pct = grand > 0 ? (cost / grand) * 100 : null;
-      const cls = pct == null ? 'flat' : pctClass(pct);
-      const pctText = pct == null ? '—' : pct.toFixed(2) + '%';
-      const fillPct = Math.min(100, pct == null ? 0 : pct);
-      const monthsToSave = (grand > 0 && cost > 0) ? Math.ceil(cost / Math.max(1, grand * 0.05)) : null; // rough: if you saved 5%/mo
-      const row = document.createElement('div');
-      row.className = 'wish-row';
-      row.innerHTML =
-          '<div class="wish-row-h">'
-        + '<div class="wish-row-info">'
-        +   '<div class="wish-row-name">' + escapeHtml(it.name) + '</div>'
-        +   '<div class="wish-row-meta">' + (it.entered_currency || 'CHF') + ' ' + Number(it.entered_amount != null ? it.entered_amount : it.amount).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' · added ' + fmtActivityDate(it.ts || Date.now()) + '</div>'
-        + '</div>'
-        + '<div class="wish-row-amt-wrap">'
-        +   '<div class="wish-row-amt">' + fmtMoney(cost) + '</div>'
-        +   '<div class="wish-row-pct ' + cls + '">' + pctText + ' of NW</div>'
-        + '</div>'
-        + '<button class="wish-row-x" data-i="' + idx + '" aria-label="Remove">×</button>'
-        + '</div>'
-        + '<div class="wish-row-bar"><div class="wish-row-bar-fill ' + cls + '" style="width:' + fillPct + '%"></div></div>';
-      wishList.appendChild(row);
-    });
-    wishList.querySelectorAll('.wish-row-x').forEach(b => {
-      b.addEventListener('click', () => {
-        const i = parseInt(b.dataset.i, 10);
-        const arr = storeGet('wishlist') || [];
-        arr.splice(i, 1);
-        storeSet('wishlist', arr);
-        renderWishlist();
-      });
-    });
-  }
-  function doWishAdd() {
-    try {
-      const nEl = document.getElementById('wishName');
-      const aEl = document.getElementById('wishAmount');
-      const cEl = document.getElementById('wishCurrency');
-      if (!nEl || !aEl) return;
-      const n = (nEl.value || '').trim();
-      const aRaw = parseFloat(aEl.value);
-      if (!n || isNaN(aRaw)) { nEl.focus(); return; }
-      const enteredCcy = cEl ? cEl.value : 'CHF';
-      const rate = exchangeRates[enteredCcy] || 1;
-      const amountCHF = aRaw / rate;
-      const arr = storeGet('wishlist') || [];
-      arr.push({
-        name: n, amount: amountCHF, ts: Date.now(),
-        entered_amount: aRaw, entered_currency: enteredCcy
-      });
-      storeSet('wishlist', arr);
-      nEl.value = ''; aEl.value = '';
-      renderWishlist();
-    } catch (e) { console.error('wishAdd failed', e); }
-  }
-  // Add button uses inline onclick + delegation. Enter on the inputs:
-  const _wishName   = document.getElementById('wishName');
-  const _wishAmount = document.getElementById('wishAmount');
-  if (_wishName)   _wishName.addEventListener('keydown', (e) => { if (e.key === 'Enter') doWishAdd(); });
-  if (_wishAmount) _wishAmount.addEventListener('keydown', (e) => { if (e.key === 'Enter') doWishAdd(); });
-  renderWishlist();
-
-  // ============================================================
-  // ADD-BUTTON BULLETPROOFING — three independent paths:
-  //   1. inline onclick attribute (in the HTML) calls window.__addX
-  //   2. document-level click delegation matches by id
-  //   3. Enter-key on the inputs (already wired above)
-  // Any one working is enough — but together they're impossible to break.
-  // ============================================================
-  window.__addSub  = doSubAdd;
-  window.__addWish = doWishAdd;
-  document.addEventListener('click', (e) => {
-    const t = e.target.closest('button');
-    if (!t) return;
-    // Skip if the button already has an inline onclick (it'll fire that itself).
-    if (t.hasAttribute('onclick')) return;
-    if (t.id === 'subAddBtn')  { e.preventDefault(); doSubAdd();  }
-    if (t.id === 'wishAddBtn') { e.preventDefault(); doWishAdd(); }
-  });
-
-  // ============================================================
-  // INCOMING ORDERS — full-spec: name, cost (CHF base), currency,
-  // fromCat, expectedDate, ts. Stored under 'incoming_orders'.
-  // (ORD_FROM_META is declared at the top of this IIFE — see the
-  // header — because renderOrders runs as part of the very first
-  // renderAllNetWorth, which fires *before* this section is reached.
-  // Declaring it here would put it in the TDZ for that first call
-  // and crash the whole script if any orders were already saved.)
-  // ============================================================
-  function ordPctClass(pct) {
-    if (pct < 5)  return 'good';
-    if (pct < 25) return 'warn';
-    return 'bad';
-  }
-  function ordFmtArrival(iso) {
-    if (!iso) return null;
-    const isoSafe = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso + 'T00:00' : iso;
-    const d = new Date(isoSafe);
-    if (isNaN(d)) return null;
-    const now = new Date();
-    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffDays = Math.round((dayStart - todayStart) / 86400000);
-    const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    let cls = '', prefix = '';
-    if (diffDays < 0)        { cls = 'past';  prefix = 'late · '; }
-    else if (diffDays === 0) { cls = 'today'; prefix = 'today · '; }
-    else if (diffDays === 1) { cls = 'soon';  prefix = 'tomorrow · '; }
-    else if (diffDays <= 7)  { cls = 'soon';  prefix = 'in ' + diffDays + 'd · '; }
-    return { cls, label: prefix + dateLabel };
-  }
-  // Build the flat list of every NW account (across all 4 categories) so
-  // both the "From" dropdown on the add form AND the deduct chooser share
-  // the same source of truth.
+  // Flat list of every NW account (across all 4 categories), shared by the
+  // quick-money selects and budget.js.
   function listAllNwAccounts() {
     const out = [];
     NW_CATS.forEach(cat => {
@@ -3346,16 +1762,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           catKey: cat.key,
           itemIdx: idx,
           itemName: String(it.name || ''),
-          amountCHF: Number(it.amount) || 0
+          amountUSD: Number(it.amount) || 0
         });
       });
     });
     return out;
   }
 
+  // Bridge for budget.js, which lives outside this closure.
+  window.__finance = {
+    storeGet, storeSet, fmtMoney, escapeHtml, listAllNwAccounts, logActivity,
+    renderAllNetWorth: () => renderAllNetWorth()
+  };
+
   // ============================================================
   // QUICK MONEY — add to any asset or transfer between two assets.
-  // Amounts are entered in the selected display currency and stored in CHF.
   // ============================================================
   function moneyAccountValue(account) {
     return account.catKey + '::' + account.itemIdx;
@@ -3368,7 +1789,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const previousFrom = fromEl.value;
     const previousTo = toEl.value;
     const icons = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
-    const options = accounts.map(account => '<option value="' + moneyAccountValue(account) + '">' + icons[account.catKey] + ' ' + escapeHtml(account.itemName) + ' · ' + fmtMoney(account.amountCHF) + '</option>').join('');
+    const options = accounts.map(account => '<option value="' + moneyAccountValue(account) + '">' + icons[account.catKey] + ' ' + escapeHtml(account.itemName) + ' · ' + fmtMoney(account.amountUSD) + '</option>').join('');
     fromEl.innerHTML = '<option value="">Source account</option>' + options;
     toEl.innerHTML = '<option value="">Destination account</option>' + options;
     if ([...fromEl.options].some(option => option.value === previousFrom)) fromEl.value = previousFrom;
@@ -3377,53 +1798,70 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   function updateMoneyActionFields() {
     const actionEl = document.getElementById('moneyAction');
     const fromEl = document.getElementById('moneyFrom');
+    const toEl = document.getElementById('moneyTo');
+    const labelEl = document.getElementById('moneyLabel');
     const hintEl = document.getElementById('moneyActionsHint');
-    if (!actionEl || !fromEl || !hintEl) return;
-    const transferring = actionEl.value === 'transfer';
-    fromEl.disabled = !transferring;
-    fromEl.style.opacity = transferring ? '1' : '0.45';
-    hintEl.textContent = transferring
+    if (!actionEl || !fromEl || !toEl || !labelEl || !hintEl) return;
+    const action = actionEl.value;
+    const transferring = action === 'transfer';
+    const needsSource = transferring || action === 'transaction';
+    fromEl.disabled = !needsSource;
+    toEl.disabled = transferring ? false : true;
+    labelEl.disabled = action === 'add' || action === 'transfer';
+    labelEl.style.opacity = labelEl.disabled ? '0.45' : '1';
+    fromEl.style.opacity = needsSource ? '1' : '0.45';
+    toEl.style.opacity = transferring ? '1' : '0.45';
+    hintEl.textContent = action === 'transfer'
       ? 'Move money between any two assets. The total net worth stays the same.'
-      : 'Add money to an asset. Use a negative balance only through the existing account editor.';
+      : action === 'transaction'
+        ? 'Log an expense from an account and add it to recent activity.'
+        : 'Add money to an asset.';
     hintEl.classList.remove('error');
   }
   function applyMoneyAction() {
     const actionEl = document.getElementById('moneyAction');
     const fromEl = document.getElementById('moneyFrom');
     const toEl = document.getElementById('moneyTo');
+    const labelEl = document.getElementById('moneyLabel');
     const amountEl = document.getElementById('moneyAmount');
     const hintEl = document.getElementById('moneyActionsHint');
-    if (!actionEl || !fromEl || !toEl || !amountEl || !hintEl) return;
+    if (!actionEl || !fromEl || !toEl || !labelEl || !amountEl || !hintEl) return;
+    const action = actionEl.value;
     const amountDisplay = parseFloat(amountEl.value);
-    const amountCHF = amountDisplay / (exchangeRates[currencyEl ? currencyEl.value : 'CHF'] || 1);
+    const amountUSD = amountDisplay;
+    const label = labelEl.value.trim();
     const destination = String(toEl.value || '').split('::');
     const source = String(fromEl.value || '').split('::');
     const fail = message => { hintEl.textContent = message; hintEl.classList.add('error'); };
-    if (!(amountDisplay > 0) || !isFinite(amountCHF)) return fail('Enter an amount greater than zero.');
-    if (destination.length !== 2 || destination[0] === '') return fail('Choose a destination asset.');
-    if (actionEl.value === 'transfer' && (source.length !== 2 || source[0] === '')) return fail('Choose a source asset.');
-    if (actionEl.value === 'transfer' && fromEl.value === toEl.value) return fail('Source and destination must be different.');
-    const destinationItems = storeGet('nw:' + destination[0]) || [];
-    const destinationIndex = Number(destination[1]);
-    if (!destinationItems[destinationIndex]) return fail('That destination is no longer available.');
+    if (!(amountDisplay > 0) || !isFinite(amountUSD)) return fail('Enter an amount greater than zero.');
+    if ((action === 'add' || action === 'transfer') && (destination.length !== 2 || destination[0] === '')) return fail('Choose a destination asset.');
+    if ((action === 'transfer' || action === 'transaction') && (source.length !== 2 || source[0] === '')) return fail('Choose a source asset.');
+    if (action === 'transaction' && !label) return fail('Add a description.');
+    if (action === 'transfer' && fromEl.value === toEl.value) return fail('Source and destination must be different.');
+    const destinationItems = action === 'add' || action === 'transfer' ? storeGet('nw:' + destination[0]) || [] : null;
+    const destinationIndex = action === 'add' || action === 'transfer' ? Number(destination[1]) : -1;
+    if (destinationItems && !destinationItems[destinationIndex]) return fail('That destination is no longer available.');
     let sourceItems = null;
     let sourceIndex = -1;
-    if (actionEl.value === 'transfer') {
+    if (action === 'transfer' || action === 'transaction') {
       sourceItems = storeGet('nw:' + source[0]) || [];
       sourceIndex = Number(source[1]);
       if (!sourceItems[sourceIndex]) return fail('That source is no longer available.');
     }
-    destinationItems[destinationIndex].amount = (Number(destinationItems[destinationIndex].amount) || 0) + amountCHF;
-    storeSet('nw:' + destination[0], destinationItems);
-    logActivity(destination[0], destinationItems[destinationIndex].name, amountCHF, actionEl.value === 'add' ? 'add' : 'edit');
-    if (actionEl.value === 'transfer') {
-      sourceItems[sourceIndex].amount = (Number(sourceItems[sourceIndex].amount) || 0) - amountCHF;
+    if (action === 'add' || action === 'transfer') {
+      destinationItems[destinationIndex].amount = (Number(destinationItems[destinationIndex].amount) || 0) + amountUSD;
+      storeSet('nw:' + destination[0], destinationItems);
+      logActivity(destination[0], destinationItems[destinationIndex].name, amountUSD, action === 'add' ? 'add' : 'edit');
+    }
+    if (action === 'transfer' || action === 'transaction') {
+      sourceItems[sourceIndex].amount = (Number(sourceItems[sourceIndex].amount) || 0) - amountUSD;
       storeSet('nw:' + source[0], sourceItems);
-      logActivity(source[0], sourceItems[sourceIndex].name, -amountCHF, 'edit');
+      logActivity(source[0], action === 'transaction' ? label : sourceItems[sourceIndex].name, -amountUSD, 'edit');
     }
     amountEl.value = '';
+    labelEl.value = '';
     hintEl.classList.remove('error');
-    hintEl.textContent = actionEl.value === 'transfer' ? 'Transfer complete.' : 'Money added.';
+    hintEl.textContent = action === 'transfer' ? 'Transfer complete.' : action === 'transaction' ? 'Transaction logged.' : 'Money added.';
     renderAllNetWorth();
     populateMoneyAccounts();
     updateMoneyActionFields();
@@ -3436,530 +1874,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   if (moneyApplyBtn) moneyApplyBtn.addEventListener('click', applyMoneyAction);
   const moneyAmountEl = document.getElementById('moneyAmount');
   if (moneyAmountEl) moneyAmountEl.addEventListener('keydown', e => { if (e.key === 'Enter') applyMoneyAction(); });
-
-  // Refill the order add-form's "From" select with the user's actual NW
-  // accounts, preserving the current selection if that account still exists.
-  function populateOrdFromSelect() {
-    const sel = document.getElementById('ordFromCat');
-    if (!sel) return;
-    const accounts = listAllNwAccounts();
-    const prev = sel.value;
-    const ICONS = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
-    if (!accounts.length) {
-      sel.innerHTML = '<option value="">No accounts yet</option>';
-      sel.disabled = true;
-      return;
-    }
-    sel.disabled = false;
-    sel.innerHTML = accounts.map(a => {
-      const value = a.catKey + '::' + a.itemName;
-      return '<option value="' + value + '">' + ICONS[a.catKey] + ' ' + escapeHtml(a.itemName) + '</option>';
-    }).join('');
-    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
-  }
-  function renderOrders() {
-    const list = document.getElementById('ordList');
-    const empty = document.getElementById('ordEmpty');
-    const count = document.getElementById('ordCount');
-    if (!list) return;
-    // Refresh the "From" dropdown so newly added/renamed/deleted NW accounts show up.
-    populateOrdFromSelect();
-    const items = storeGet('incoming_orders') || [];
-    const grand = nwGrandCHF();
-    if (count) count.textContent = items.length + (items.length === 1 ? ' item' : ' items');
-    // Always clear before painting — earlier this re-rendered as an APPEND
-    // (so every NW change duplicated the cards). Now it's an idempotent paint.
-    list.innerHTML = '';
-    if (!items.length) {
-      if (empty) empty.classList.remove('hidden');
-      return;
-    }
-    if (empty) empty.classList.add('hidden');
-    // Sort: arrival date soonest first, undated last
-    items.slice().sort((a, b) => {
-      if (!a.date) return 1;
-      if (!b.date) return -1;
-      return a.date.localeCompare(b.date);
-    }).forEach(o => {
-      const cost = Number(o.amount) || 0;
-      const isDeducted = !!o.deductedAt;
-      // Use frozen pct once deducted; live pct otherwise.
-      let pct, pctText, pctCls;
-      if (isDeducted && typeof o.pctAtDeduction === 'number') {
-        pct = o.pctAtDeduction;
-        pctText = pct.toFixed(2) + '% of NW';
-        pctCls = ordPctClass(pct) + ' frozen';
-      } else if (grand > 0) {
-        pct = (cost / grand) * 100;
-        pctText = pct.toFixed(2) + '% of NW';
-        pctCls = ordPctClass(pct);
-      } else {
-        pct = null;
-        pctText = '— of NW';
-        pctCls = '';
-      }
-      const fromMeta = ORD_FROM_META[o.fromCat] || ORD_FROM_META.bank;
-      const fromAccountLabel = o.fromAccount ? escapeHtml(o.fromAccount) : fromMeta.name;
-      const arr = ordFmtArrival(o.date);
-      const arrHtml = arr
-        ? '<span class="ord-meta-pill date ' + arr.cls + '">' + arr.label + '</span>'
-        : '<span class="ord-meta-pill date">no arrival</span>';
-      const row = document.createElement('div');
-      row.className = 'ord-card cat-' + (o.fromCat || 'bank') + (isDeducted ? ' is-deducted' : '');
-      const footHtml = isDeducted
-        ? '<div class="ord-card-foot">'
-          +   '<span class="ord-deducted-pill">Deducted from ' + escapeHtml(o.deductedFrom && o.deductedFrom.name ? o.deductedFrom.name : fromAccountLabel) + '</span>'
-          +   '<button class="ord-deduct-undo" data-undo-id="' + o.id + '">Undo</button>'
-          + '</div>'
-        : '<div class="ord-card-foot">'
-          +   '<button class="ord-deduct-btn" data-deduct-id="' + o.id + '">− Deduct from net worth</button>'
-          + '</div>';
-      row.innerHTML =
-          '<div class="ord-card-h">'
-        +   '<div class="ord-card-name">' + escapeHtml(o.name) + '</div>'
-        +   '<div class="ord-card-amt">' + fmtMoney(cost) + '</div>'
-        +   '<button class="ord-card-x" data-id="' + o.id + '" aria-label="Remove">×</button>'
-        + '</div>'
-        + '<div class="ord-card-meta">'
-        +   '<span class="ord-meta-pill from">from · ' + fromAccountLabel + '</span>'
-        +   '<span class="ord-meta-pill pct ' + pctCls + '">' + pctText + '</span>'
-        +   arrHtml
-        + '</div>'
-        + footHtml;
-      list.appendChild(row);
-    });
-    // Wire up delete (×), deduct, and undo buttons.
-    list.querySelectorAll('.ord-card-x').forEach(b => {
-      b.addEventListener('click', () => {
-        const id = b.dataset.id;
-        const arr = (storeGet('incoming_orders') || []).filter(x => x.id !== id);
-        storeSet('incoming_orders', arr);
-        renderOrders();
-      });
-    });
-    list.querySelectorAll('.ord-deduct-btn').forEach(b => {
-      b.addEventListener('click', () => openDeductChooser(b.dataset.deductId, b.closest('.ord-card')));
-    });
-    list.querySelectorAll('.ord-deduct-undo').forEach(b => {
-      b.addEventListener('click', () => undoDeduct(b.dataset.undoId));
-    });
-  }
-  // ============================================================
-  // DEDUCT — open the inline chooser of NW accounts. Picking one
-  // subtracts the order amount from that account (in CHF), logs the
-  // activity, freezes the order's % at the moment of deduction, and
-  // marks the order as deducted (with no further % updates).
-  // ============================================================
-  function openDeductChooser(orderId, cardEl) {
-    if (!cardEl) return;
-    // Toggle: if a chooser already exists in this card, remove it.
-    const existing = cardEl.querySelector('.ord-deduct-chooser');
-    if (existing) { existing.remove(); return; }
-    const order = (storeGet('incoming_orders') || []).find(x => x.id === orderId);
-    if (!order) return;
-    const accounts = listAllNwAccounts();
-    if (!accounts.length) {
-      alert('Add at least one net worth account before deducting.');
-      return;
-    }
-    const ICONS = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
-    const cost = Number(order.amount) || 0;
-    const optsHtml = accounts.map(a => {
-      const insufficient = a.amountCHF < cost - 0.005;
-      const cls = 'ord-deduct-opt' + (insufficient ? ' insufficient' : '');
-      return '<button class="' + cls + '" '
-        + 'data-cat="' + a.catKey + '" '
-        + 'data-name="' + escapeHtml(a.itemName) + '" '
-        + (insufficient ? 'data-insuf="1" ' : '')
-        + '>'
-        + ICONS[a.catKey] + ' ' + escapeHtml(a.itemName)
-        + '<small>' + fmtMoney(a.amountCHF) + (insufficient ? ' · not enough' : ' available') + '</small>'
-        + '</button>';
-    }).join('');
-    const chooser = document.createElement('div');
-    chooser.className = 'ord-deduct-chooser';
-    chooser.innerHTML =
-        '<div class="ord-deduct-chooser-title">Deduct ' + fmtMoney(cost) + ' from…</div>'
-      + '<div class="ord-deduct-options">' + optsHtml + '</div>'
-      + '<button class="ord-deduct-cancel" type="button">cancel</button>';
-    cardEl.appendChild(chooser);
-    chooser.querySelectorAll('.ord-deduct-opt').forEach(b => {
-      b.addEventListener('click', () => {
-        if (b.dataset.insuf === '1') {
-          if (!confirm('That account doesn\'t have enough — deduct anyway? (it will go negative)')) return;
-        }
-        confirmDeduct(orderId, b.dataset.cat, b.dataset.name);
-      });
-    });
-    chooser.querySelector('.ord-deduct-cancel').addEventListener('click', () => chooser.remove());
-  }
-  function confirmDeduct(orderId, catKey, itemName) {
-    const orders = storeGet('incoming_orders') || [];
-    const oIdx = orders.findIndex(x => x.id === orderId);
-    if (oIdx < 0) return;
-    const order = orders[oIdx];
-    if (order.deductedAt) return; // already deducted
-    const items = storeGet('nw:' + catKey) || [];
-    const itemIdx = items.findIndex(it => String(it.name) === String(itemName));
-    if (itemIdx < 0) {
-      alert('That account no longer exists. Refresh the chooser.');
-      return;
-    }
-    const cost = Number(order.amount) || 0;
-    const grandBefore = nwGrandCHF();
-    const pctAtDeduction = grandBefore > 0 ? (cost / grandBefore) * 100 : 0;
-    // Subtract from the chosen NW account
-    items[itemIdx].amount = (Number(items[itemIdx].amount) || 0) - cost;
-    storeSet('nw:' + catKey, items);
-    logActivity(catKey, items[itemIdx].name, -cost, 'edit');
-    // Mark the order as deducted with frozen %
-    orders[oIdx] = {
-      ...order,
-      deductedAt: Date.now(),
-      pctAtDeduction: pctAtDeduction,
-      deductedFrom: { cat: catKey, name: items[itemIdx].name }
-    };
-    storeSet('incoming_orders', orders);
-    renderAllNetWorth();   // re-paints NW totals, donut, activity, and orders
-  }
-  function undoDeduct(orderId) {
-    const orders = storeGet('incoming_orders') || [];
-    const oIdx = orders.findIndex(x => x.id === orderId);
-    if (oIdx < 0) return;
-    const order = orders[oIdx];
-    if (!order.deductedAt || !order.deductedFrom) return;
-    const cost = Number(order.amount) || 0;
-    const items = storeGet('nw:' + order.deductedFrom.cat) || [];
-    const itemIdx = items.findIndex(it => String(it.name) === String(order.deductedFrom.name));
-    if (itemIdx >= 0) {
-      items[itemIdx].amount = (Number(items[itemIdx].amount) || 0) + cost;
-      storeSet('nw:' + order.deductedFrom.cat, items);
-      logActivity(order.deductedFrom.cat, items[itemIdx].name, cost, 'edit');
-    }
-    orders[oIdx] = { ...order, deductedAt: null, pctAtDeduction: null, deductedFrom: null };
-    storeSet('incoming_orders', orders);
-    renderAllNetWorth();
-  }
-  // Wire renderOrders into the global render so it stays in sync with NW changes
-  const _prevRenderAll = (typeof renderAllNetWorth === 'function') ? renderAllNetWorth : null;
-  // The "From" select uses values like "bank::star one". Split into parts.
-  function parseFromValue(v) {
-    const s = String(v || '');
-    const ix = s.indexOf('::');
-    if (ix < 0) return { cat: 'bank', name: '' };
-    return { cat: s.slice(0, ix), name: s.slice(ix + 2) };
-  }
-  // Live preview on the add card — updates as user types the cost
-  function updateOrdPreview() {
-    const costEl = document.getElementById('ordCost');
-    const ccyEl  = document.getElementById('ordCurrency');
-    const fromEl = document.getElementById('ordFromCat');
-    const prev   = document.getElementById('ordAddPreview');
-    if (!prev) return;
-    const aRaw = parseFloat(costEl && costEl.value);
-    if (!costEl || isNaN(aRaw) || aRaw <= 0) {
-      prev.textContent = 'Type a cost — preview will show what % of net worth it takes.';
-      prev.className = 'ord-add-preview';
-      return;
-    }
-    const ccy = ccyEl ? ccyEl.value : 'CHF';
-    const rate = exchangeRates[ccy] || 1;
-    const amountCHF = aRaw / rate;
-    const grand = nwGrandCHF();
-    const parsed = parseFromValue(fromEl ? fromEl.value : '');
-    const fromName = parsed.name || (ORD_FROM_META[parsed.cat] || ORD_FROM_META.bank).name;
-    if (grand > 0) {
-      const pct = (amountCHF / grand) * 100;
-      const cls = ordPctClass(pct);
-      prev.textContent = fmtMoney(amountCHF) + ' from ' + fromName + ' · ' + pct.toFixed(2) + '% of your ' + fmtMoney(grand) + ' net worth';
-      prev.className = 'ord-add-preview ' + (cls === 'good' ? '' : cls);
-    } else {
-      prev.textContent = fmtMoney(amountCHF) + ' from ' + fromName + ' · add net worth first to see %';
-      prev.className = 'ord-add-preview';
-    }
-  }
-  function doOrdAdd() {
-    try {
-      const nEl = document.getElementById('ordName');
-      const aEl = document.getElementById('ordCost');
-      const cEl = document.getElementById('ordCurrency');
-      const fEl = document.getElementById('ordFromCat');
-      const dEl = document.getElementById('ordArrival');
-      if (!nEl || !aEl) return;
-      const n = (nEl.value || '').trim();
-      const aRaw = parseFloat(aEl.value);
-      if (!n || isNaN(aRaw)) { nEl.focus(); return; }
-      const ccy = cEl ? cEl.value : 'CHF';
-      const rate = exchangeRates[ccy] || 1;
-      const amountCHF = aRaw / rate;
-      const parsed = parseFromValue(fEl ? fEl.value : '');
-      const arr = storeGet('incoming_orders') || [];
-      arr.push({
-        id: 'o_' + Date.now() + '_' + Math.floor(Math.random() * 9999),
-        name: n,
-        amount: amountCHF,
-        entered_amount: aRaw,
-        entered_currency: ccy,
-        fromCat: parsed.cat || 'bank',
-        fromAccount: parsed.name || null,    // the actual NW item the user picked
-        date: dEl && dEl.value ? dEl.value : null,
-        ts: Date.now(),
-        deductedAt: null,
-        pctAtDeduction: null,
-        deductedFrom: null
-      });
-      storeSet('incoming_orders', arr);
-      nEl.value = ''; aEl.value = '';
-      if (dEl) dEl.value = '';
-      updateOrdPreview();
-      renderOrders();
-    } catch (e) { console.error('ordAdd failed', e); }
-  }
-  window.__addOrder = doOrdAdd;
-  // Wire live-preview listeners
-  ['ordCost','ordCurrency','ordFromCat'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', updateOrdPreview);
-    if (el) el.addEventListener('change', updateOrdPreview);
-  });
-  ['ordName','ordCost'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') doOrdAdd(); });
-  });
-  renderOrders();
-  updateOrdPreview();
-
-  // ============================================================
-  // FINANCE TICKER — rotates through upcoming subscription renewals
-  // every 5 seconds. Flashes red whenever the currently displayed sub
-  // renews in 5 days or fewer. Hides itself if there are no renewals.
-  // ============================================================
-  // Roll a renewal date forward by the period until it's >= today, so a
-  // sub that renewed Apr 28 (monthly) auto-shows the next renewal date
-  // instead of "past". Returns a Date.
-  function nextRenewalDate(isoDate, period) {
-    const isoSafe = (typeof isoDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(isoDate)) ? isoDate + 'T00:00' : isoDate;
-    let d = new Date(isoSafe);
-    if (isNaN(d)) return null;
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let safety = 0;
-    while (d < today && safety++ < 600) {
-      if (period === 'weekly')      d.setDate(d.getDate() + 7);
-      else if (period === 'yearly') d.setFullYear(d.getFullYear() + 1);
-      else                          d.setMonth(d.getMonth() + 1); // monthly default
-    }
-    return d;
-  }
-  function buildTickerEntries() {
-    const subs = storeGet('subs') || [];
-    const out = [];
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    subs.forEach(s => {
-      if (!s.renewal) return;
-      const next = nextRenewalDate(s.renewal, s.period);
-      if (!next) return;
-      const days = Math.round((next.getTime() - today) / 86400000);
-      // Use the period-local cost for what the user actually pays at renewal,
-      // not the monthlyEquivalent — this ticker shows "what's about to hit".
-      out.push({
-        name: s.name,
-        amount: Number(s.amount) || 0,
-        days,
-        period: s.period
-      });
-    });
-    out.sort((a, b) => a.days - b.days);
-    return out;
-  }
-  let tickerIdx = 0;
-  let tickerTimer = null;
-  let tickerLastSig = '';   // signature of last-painted entries — skip re-paint if unchanged
-  let tickerLastEntries = [];
-  function tickerSig(entries) {
-    return entries.map(e => e.name + '|' + e.amount + '|' + e.days + '|' + (e.period || '')).join('~');
-  }
-  function paintTickerActive(wrap, stream, dots, entries) {
-    if (tickerIdx >= entries.length) tickerIdx = 0;
-    const items = stream.querySelectorAll('.ticker-item');
-    const dotEls = dots.querySelectorAll('.ticker-dot');
-    items.forEach((el, i) => el.classList.toggle('active', i === tickerIdx));
-    dotEls.forEach((el, i) => el.classList.toggle('active', i === tickerIdx));
-    const cur = entries[tickerIdx];
-    wrap.classList.toggle('urgent', !!(cur && cur.days <= 5));
-  }
-  function renderTicker() {
-    const wrap   = document.getElementById('financeTicker');
-    const stream = document.getElementById('tickerStream');
-    const dots   = document.getElementById('tickerDots');
-    if (!wrap || !stream || !dots) return;
-    const entries = buildTickerEntries();
-    const sig = tickerSig(entries);
-    // Fast path: nothing changed — don't repaint, don't disturb rotation.
-    if (sig === tickerLastSig) {
-      // Refresh urgent state in case the active item ticked closer (days didn't change but it's nice to keep in sync)
-      if (entries.length) paintTickerActive(wrap, stream, dots, entries);
-      return;
-    }
-    tickerLastSig = sig;
-    tickerLastEntries = entries;
-    if (!entries.length) {
-      wrap.classList.add('hidden');
-      stream.innerHTML = '';
-      dots.innerHTML = '';
-      if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null; }
-      return;
-    }
-    wrap.classList.remove('hidden');
-    if (tickerIdx >= entries.length) tickerIdx = 0;
-
-    // Paint the items as overlapping absolute layers; .active is the visible one
-    stream.innerHTML = entries.map((e, i) => {
-      const daysLabel = e.days < 0
-        ? Math.abs(e.days) + 'd late'
-        : e.days === 0
-          ? 'TODAY'
-          : e.days === 1
-            ? 'TOMORROW'
-            : 'in ' + e.days + 'd';
-      return '<div class="ticker-item' + (i === tickerIdx ? ' active' : '') + '" data-i="' + i + '">'
-        +   '<span class="ticker-item-name">' + escapeHtml(e.name) + '</span>'
-        +   '<span class="ticker-item-amt">' + fmtMoney(e.amount) + '</span>'
-        +   '<span class="ticker-item-days">' + daysLabel + '</span>'
-        + '</div>';
-    }).join('');
-    dots.innerHTML = entries.map((_, i) =>
-      '<span class="ticker-dot' + (i === tickerIdx ? ' active' : '') + '"></span>'
-    ).join('');
-    paintTickerActive(wrap, stream, dots, entries);
-
-    if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null; }
-    if (entries.length > 1) {
-      tickerTimer = setInterval(() => {
-        if (!tickerLastEntries.length) return;
-        tickerIdx = (tickerIdx + 1) % tickerLastEntries.length;
-        const w = document.getElementById('financeTicker');
-        const s = document.getElementById('tickerStream');
-        const d = document.getElementById('tickerDots');
-        if (w && s && d) paintTickerActive(w, s, d, tickerLastEntries);
-      }, 5000);
-    }
-  }
-  // Drive the ticker on a 1s heartbeat — bulletproof and avoids any
-  // fragile wrapping of renderSubs (which broke the add buttons before).
-  // The actual swap is gated by tickerTimer's own 5s interval inside
-  // renderTicker; this loop just keeps the data fresh whenever subs change.
-  function safeRenderTicker() {
-    try { renderTicker(); } catch (e) { console.error('ticker render failed', e); }
-  }
-  safeRenderTicker();
-  setInterval(safeRenderTicker, 1500);
-
-  // ============================================================
-  // NOVA — AI money coach. Sends the chat + a snapshot of the
-  // user's finances to /api/nova (Claude) and renders the reply.
-  // ============================================================
-  (function initNova() {
-    const messagesEl = document.getElementById('novaMessages');
-    const inputEl    = document.getElementById('novaInput');
-    const sendBtn    = document.getElementById('novaSend');
-    const suggEl     = document.getElementById('novaSuggestions');
-    if (!messagesEl || !inputEl || !sendBtn) return;
-
-    const convo = []; // [{ role:'user'|'assistant', content:string }]
-
-    // Snapshot of everything Nova should be able to reason about.
-    function gatherFinance() {
-      const breakdown = {};
-      let netWorthCHF = 0;
-      ['bank', 'stocks', 'crypto', 'other'].forEach(k => {
-        const items = storeGet('nw:' + k) || [];
-        breakdown[k] = items.map(it => ({ name: it.name, amountCHF: Number(it.amount) || 0 }));
-        items.forEach(it => { netWorthCHF += Number(it.amount) || 0; });
-      });
-      return {
-        currency: storeGet('nw_currency') || 'CHF',
-        netWorthCHF: Math.round(netWorthCHF),
-        accounts: breakdown,
-        subscriptions: storeGet('subs') || [],
-        bills: storeGet('bills') || [],
-        incomingOrders: storeGet('incoming_orders') || [],
-        wishlist: storeGet('wishlist') || []
-      };
-    }
-
-    function addBubble(role, text) {
-      const el = document.createElement('div');
-      el.className = 'nova-msg nova-msg-' + role;
-      el.textContent = text;
-      messagesEl.appendChild(el);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      return el;
-    }
-
-    async function send(text) {
-      text = (text != null ? text : inputEl.value || '').trim();
-      if (!text || sendBtn.disabled) return;
-      inputEl.value = '';
-      inputEl.style.height = 'auto';
-      if (suggEl) suggEl.style.display = 'none';
-
-      addBubble('user', text);
-      convo.push({ role: 'user', content: text });
-
-      sendBtn.disabled = true;
-      const pending = addBubble('nova', 'Nova is thinking…');
-      pending.classList.add('nova-msg-loading');
-
-      try {
-        const r = await fetch('/api/nova', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: convo, finance: gatherFinance() })
-        });
-        const data = await r.json().catch(() => ({}));
-        pending.classList.remove('nova-msg-loading');
-        if (!r.ok) {
-          pending.textContent = '⚠ ' + ((data && data.error) || 'Something went wrong.');
-        } else {
-          const reply = (data.text || '').trim() || '(no response)';
-          pending.textContent = reply;
-          convo.push({ role: 'assistant', content: reply });
-        }
-      } catch (e) {
-        pending.classList.remove('nova-msg-loading');
-        pending.textContent = '⚠ Couldn’t reach Nova. Check your connection and that the server is configured.';
-      } finally {
-        sendBtn.disabled = false;
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }
-    }
-
-    // Auto-grow the textarea as the user types.
-    inputEl.addEventListener('input', () => {
-      inputEl.style.height = 'auto';
-      inputEl.style.height = Math.min(inputEl.scrollHeight, 130) + 'px';
-    });
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-    });
-    sendBtn.addEventListener('click', () => send());
-    if (suggEl) suggEl.querySelectorAll('[data-q]').forEach(chip => {
-      chip.addEventListener('click', () => send(chip.dataset.q));
-    });
-  })();
+  const moneyLabelEl = document.getElementById('moneyLabel');
+  if (moneyLabelEl) moneyLabelEl.addEventListener('keydown', e => { if (e.key === 'Enter') applyMoneyAction(); });
 
   // ============================================================
   // RECEIPT SCANNER — drag/drop/paste a receipt photo, send it to
-  // /api/receipt (Claude vision), then deduct the total from a chosen
-  // net-worth account. No chat mentor involved — pure import tool.
+  // /api/receipt (Claude vision) with the budget categories. Expense
+  // receipts come back with each item sorted into a category; applying
+  // records them as budget transactions (budget.js) on the chosen card
+  // or cash. Balance screenshots still set a net-worth account.
   // ============================================================
   (function initReceiptScanner() {
     const card       = document.getElementById('rcptCard');
     if (!card) return;
     const dropEl     = document.getElementById('rcptDrop');
     const fileEl     = document.getElementById('rcptFile');
+    const cameraEl   = document.getElementById('rcptCamera');
     const busyEl     = document.getElementById('rcptBusy');
     const busyThumb  = document.getElementById('rcptThumb');
     const errorEl    = document.getElementById('rcptError');
@@ -3967,7 +1897,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const confThumb  = document.getElementById('rcptConfirmThumb');
     const merchantEl = document.getElementById('rcptMerchant');
     const totalEl    = document.getElementById('rcptTotal');
-    const currencyEl2= document.getElementById('rcptCurrency');
     const accountEl  = document.getElementById('rcptAccount');
     const itemsEl    = document.getElementById('rcptItems');
     const hintEl     = document.getElementById('rcptHint');
@@ -3976,11 +1905,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
     const accountLabel = card.querySelector('label[for="rcptAccount"]');
     const ACCT_ICONS = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
-    const VALID_CCY  = ['CHF', 'USD', 'EUR', 'GBP'];
     let receiptDate  = '';
     // 'balance' = the image shows a current account balance (set the account to
     // it); anything else (expense / receipt) = deduct it. Driven by api/receipt.js.
     let receiptKind  = '';
+    // Editable receipt lines: { name, amount, categoryId }
+    let receiptLines = [];
+    const budget = () => window.__budget;
 
     function show(el)  { el.classList.remove('hidden'); }
     function hide(el)  { el.classList.add('hidden'); }
@@ -3988,8 +1919,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     function reset() {
       show(dropEl); hide(busyEl); hide(errorEl); hide(confirmEl);
       fileEl.value = '';
+      cameraEl.value = '';
       receiptDate = '';
       receiptKind = '';
+      receiptLines = [];
     }
     function showError(msg) {
       hide(busyEl); hide(confirmEl); show(dropEl);
@@ -4015,16 +1948,34 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const scale = Math.min(1, MAX / Math.max(w, h || 1));
       w = Math.max(1, Math.round(w * scale));
       h = Math.max(1, Math.round(h * scale));
+      if (!w || !h) throw new Error("Couldn't determine the receipt image size.");
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      const context = c.getContext('2d', { alpha: false });
+      if (!context) throw new Error("Couldn't prepare the receipt image.");
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, w, h);
+      context.drawImage(img, 0, 0, w, h);
       const dataUrl = c.toDataURL('image/jpeg', 0.85);
+      if (!dataUrl || dataUrl.length < 100) throw new Error("Couldn't prepare the receipt image.");
       return { dataUrl, base64: dataUrl.split(',')[1] || '', mediaType: 'image/jpeg' };
     }
 
-    function fillAccounts(isBalance, merchantName) {
-      const accounts = listAllNwAccounts();
+    function fillAccounts(isBalance, merchantName, paymentHint) {
       accountEl.innerHTML = '';
+      if (!isBalance && budget()) {
+        budget().methods().forEach(m => {
+          const o = document.createElement('option');
+          o.value = 'method::' + m.id;
+          o.textContent = budget().methodLabel(m);
+          accountEl.appendChild(o);
+        });
+        const matched = budget().matchMethod(paymentHint);
+        if (matched) accountEl.value = 'method::' + matched;
+        accountEl.disabled = !accountEl.options.length;
+        return !accountEl.disabled;
+      }
+      const accounts = listAllNwAccounts();
       // A balance can populate a brand-new account, so offer that even when the
       // user has none yet — that's exactly the first-run case.
       if (isBalance) {
@@ -4036,7 +1987,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       accounts.forEach(a => {
         const o = document.createElement('option');
         o.value = a.catKey + '::' + a.itemName;
-        o.textContent = (ACCT_ICONS[a.catKey] || '') + ' ' + a.itemName + ' · ' + fmtMoney(a.amountCHF);
+        o.textContent = (ACCT_ICONS[a.catKey] || '') + ' ' + a.itemName + ' · ' + fmtMoney(a.amountUSD);
         accountEl.appendChild(o);
       });
       if (!accountEl.options.length) {
@@ -4054,28 +2005,88 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const n = parseFloat(String(totalEl.value).replace(/[^0-9.\-]/g, ''));
       return isNaN(n) ? 0 : n;
     }
+    // Scale item prices so they add up to the receipt total (tax, discounts),
+    // then group by category.
+    function receiptSplit() {
+      const total = parseTotal();
+      const lines = receiptLines.filter(l => Number(l.amount) > 0);
+      const itemSum = lines.reduce((sum, l) => sum + Number(l.amount), 0);
+      const scale = itemSum > 0 ? total / itemSum : 0;
+      const byCat = {};
+      lines.forEach(l => {
+        const key = l.categoryId || '';
+        if (!byCat[key]) byCat[key] = { categoryId: key, amount: 0, items: [] };
+        byCat[key].amount += Number(l.amount) * scale;
+        byCat[key].items.push(l.name || 'Item');
+      });
+      return Object.values(byCat);
+    }
+    function renderLines() {
+      if (!budget() || receiptKind === 'balance') { itemsEl.innerHTML = ''; hide(itemsEl); return; }
+      const cats = budget().categories();
+      const options = cats.map(c => '<option value="' + escapeHtml(c.id) + '">' + escapeHtml((c.icon ? c.icon + ' ' : '') + c.name) + '</option>').join('');
+      itemsEl.innerHTML = '<div class="rcpt-lines-head"><span>Item</span><span>Price</span><span>Category</span><span></span></div>'
+        + receiptLines.map((l, i) => '<div class="rcpt-line" data-i="' + i + '">'
+          + '<input type="text" class="rcpt-line-name" value="' + escapeHtml(l.name) + '" aria-label="Item name" />'
+          + '<input type="text" inputmode="decimal" class="rcpt-line-amt mono" value="' + (Number(l.amount) ? Number(l.amount).toFixed(2) : '') + '" aria-label="Item price" />'
+          + '<select class="rcpt-line-cat" aria-label="Item category">' + options + '</select>'
+          + '<button type="button" class="rcpt-line-x" aria-label="Remove item">×</button></div>').join('')
+        + '<button type="button" class="rcpt-line-add">+ Add line</button>';
+      itemsEl.querySelectorAll('.rcpt-line').forEach(row => {
+        const i = Number(row.dataset.i);
+        const sel = row.querySelector('.rcpt-line-cat');
+        sel.value = receiptLines[i].categoryId && cats.some(c => c.id === receiptLines[i].categoryId) ? receiptLines[i].categoryId : (cats[0] ? cats[0].id : '');
+        receiptLines[i].categoryId = sel.value;
+        sel.addEventListener('change', () => { receiptLines[i].categoryId = sel.value; refreshHint(); });
+        row.querySelector('.rcpt-line-name').addEventListener('input', e => { receiptLines[i].name = e.target.value; });
+        row.querySelector('.rcpt-line-amt').addEventListener('input', e => {
+          receiptLines[i].amount = parseFloat(String(e.target.value).replace(/[^0-9.\-]/g, '')) || 0;
+          refreshHint();
+        });
+        row.querySelector('.rcpt-line-x').addEventListener('click', () => { receiptLines.splice(i, 1); renderLines(); refreshHint(); });
+      });
+      itemsEl.querySelector('.rcpt-line-add').addEventListener('click', () => {
+        receiptLines.push({ name: merchantEl.value.trim() || 'Item', amount: 0, categoryId: cats[0] ? cats[0].id : '' });
+        renderLines(); refreshHint();
+      });
+      show(itemsEl);
+    }
+
     function refreshHint() {
       const total = parseTotal();
-      const rate = exchangeRates[currencyEl2.value] || 1;
       const datePart = receiptDate ? ('Dated ' + receiptDate + ' · ') : '';
       if (!(total > 0)) {
         hintEl.textContent = receiptDate ? ('Dated ' + receiptDate) : '';
         applyBtn.disabled = true;
         return;
       }
-      const totalCHF = total / rate;
+      const totalUSD = total;
       if (receiptKind === 'balance') {
         // A balance is the money you currently have — set the account to it,
         // don't subtract it.
         if (accountEl.value === '__new__') {
           const nm = merchantEl.value.trim() || 'New account';
-          hintEl.textContent = datePart + 'Creates "' + nm + '" holding ' + fmtMoney(totalCHF) + '.';
+          hintEl.textContent = datePart + 'Creates "' + nm + '" holding ' + fmtMoney(totalUSD) + '.';
         } else {
           const nm = (accountEl.value.split('::')[1] || 'this account');
-          hintEl.textContent = datePart + 'Sets ' + nm + ' to ' + fmtMoney(totalCHF) + '.';
+          hintEl.textContent = datePart + 'Sets ' + nm + ' to ' + fmtMoney(totalUSD) + '.';
         }
+      } else if (budget()) {
+        const cats = budget().categories();
+        const split = receiptSplit().map(g => {
+          const c = cats.find(x => x.id === g.categoryId);
+          return (c ? (c.icon ? c.icon + ' ' : '') + c.name : 'Uncategorized') + ' ' + fmtMoney(g.amount);
+        });
+        const method = budget().methods().find(m => 'method::' + m.id === accountEl.value);
+        const account = method && method.account ? ' · deducts from ' + method.account.split('::')[1] : '';
+        const lineSum = receiptLines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+        const note = receiptLines.length && Math.abs(lineSum - total) > 0.009
+          ? ' · items add to ' + lineSum.toFixed(2) + ', the difference (tax/discounts) is spread across them' : '';
+        hintEl.textContent = datePart + (split.length ? split.join(' · ') : 'Add at least one line') + account + note;
+        applyBtn.disabled = accountEl.disabled || !split.length;
+        return;
       } else {
-        hintEl.textContent = datePart + 'Deducts ' + fmtMoney(totalCHF) + ' from your net worth.';
+        hintEl.textContent = datePart + 'Deducts ' + fmtMoney(totalUSD) + ' from your net worth.';
       }
       applyBtn.disabled = accountEl.disabled;
     }
@@ -4097,35 +2108,31 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       merchantEl.value = String(receipt.source || receipt.merchant || '').trim();
       const total = Number(receipt.amount != null ? receipt.amount : receipt.total) || 0;
       totalEl.value = total ? String(total) : '';
-      let ccy = String(receipt.currency || '').toUpperCase();
-      if (!VALID_CCY.includes(ccy)) ccy = (currencyEl && currencyEl.value) || 'CHF';
-      currencyEl2.value = ccy;
       receiptDate = String(receipt.date || '').trim();
 
       const isBalance = receiptKind === 'balance';
-      if (accountLabel) accountLabel.textContent = isBalance ? 'Set balance of' : 'Deduct from';
-      fillAccounts(isBalance, merchantEl.value.trim());
+      if (accountLabel) accountLabel.textContent = isBalance ? 'Set balance of' : 'Paid with';
+      fillAccounts(isBalance, merchantEl.value.trim(), receipt.payment_hint);
 
-      // Line items, best effort. The API returns items as { name, amount };
-      // older responses used { name, price }.
+      // Line items with the category the AI picked for each. A receipt with
+      // no readable items becomes one line for the whole total.
       const items = Array.isArray(receipt.items) ? receipt.items : [];
-      if (items.length) {
-        itemsEl.innerHTML = items.slice(0, 20).map(it => {
-          const price = Number(it.amount != null ? it.amount : it.price);
-          return '<div class="rcpt-item"><span>' + escapeHtml(String(it.name || '')) + '</span>'
-            + '<span>' + (price ? price.toFixed(2) : '') + '</span></div>';
-        }).join('');
-        show(itemsEl);
-      } else {
-        itemsEl.innerHTML = ''; hide(itemsEl);
+      receiptLines = items.slice(0, 40).map(it => ({
+        name: String(it.name || '').trim(),
+        amount: Number(it.amount != null ? it.amount : it.price) || 0,
+        categoryId: String(it.category_id || '')
+      }));
+      if (!isBalance && !receiptLines.length) {
+        receiptLines = [{ name: merchantEl.value.trim() || 'Purchase', amount: total, categoryId: budget() ? budget().guessCategory(merchantEl.value) : '' }];
       }
+      renderLines();
 
       refreshHint();
       show(confirmEl);
     }
 
     async function handleFile(file) {
-      if (!file || !/^image\//.test(file.type)) {
+      if (!file || (!/^image\//.test(file.type) && !/\.(jpe?g|png|gif|webp)$/i.test(file.name || ''))) {
         showError('Please choose an image file.');
         return;
       }
@@ -4140,10 +2147,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       busyThumb.src = img.dataUrl;
       show(busyEl);
       try {
+        const categories = budget() ? budget().categories().map(c => ({ id: c.id, name: c.name })) : [];
         const r = await fetch('/api/receipt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: img.base64, mediaType: img.mediaType })
+          body: JSON.stringify({ image: img.base64, mediaType: img.mediaType, categories })
         });
         const data = await r.json().catch(() => ({}));
         if (!r.ok) { showError((data && data.error) || 'Something went wrong reading the receipt.'); return; }
@@ -4157,18 +2165,33 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       if (applyBtn.disabled) return;
       const total = parseTotal();
       if (!(total > 0)) { refreshHint(); return; }
-      const rate = exchangeRates[currencyEl2.value] || 1;
-      const totalCHF = total / rate;
+      const totalUSD = total;
       const isBalance = receiptKind === 'balance';
 
       // Balance + "New account": create a bank account holding this balance.
       if (isBalance && accountEl.value === '__new__') {
         const nm = merchantEl.value.trim() || 'Account';
         const list = storeGet('nw:bank') || [];
-        list.push({ name: nm, amount: totalCHF });
+        list.push({ name: nm, amount: totalUSD });
         storeSet('nw:bank', list);
-        logActivity('bank', nm, totalCHF, 'add');
+        logActivity('bank', nm, totalUSD, 'add');
         renderAllNetWorth();
+        reset();
+        return;
+      }
+
+      // Expense receipt: record categorized budget transactions.
+      if (!isBalance && budget()) {
+        const methodId = accountEl.value.startsWith('method::') ? accountEl.value.slice(8) : '';
+        const lines = receiptSplit();
+        if (!lines.length) { refreshHint(); return; }
+        const result = budget().recordReceipt({
+          merchant: merchantEl.value.trim() || 'Receipt',
+          date: receiptDate,
+          methodId,
+          lines
+        });
+        if (result && result.error) { showError(result.error); return; }
         reset();
         return;
       }
@@ -4185,16 +2208,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const cur = Number(items[idx].amount) || 0;
       if (isBalance) {
         // The figure is the account's current balance — set it, log the change.
-        items[idx].amount = totalCHF;
+        items[idx].amount = totalUSD;
         storeSet('nw:' + cat, items);
-        logActivity(cat, name, totalCHF - cur, 'edit');
+        logActivity(cat, name, totalUSD - cur, 'edit');
       } else {
-        if (totalCHF > cur + 0.005) {
+        if (totalUSD > cur + 0.005) {
           if (!confirm(name + " doesn't have enough — deduct anyway? (it will go negative)")) return;
         }
-        items[idx].amount = cur - totalCHF;
+        items[idx].amount = cur - totalUSD;
         storeSet('nw:' + cat, items);
-        logActivity(cat, merchantEl.value.trim() || 'Receipt', -totalCHF, 'edit');
+        logActivity(cat, merchantEl.value.trim() || 'Receipt', -totalUSD, 'edit');
       }
       renderAllNetWorth();
       reset();
@@ -4206,6 +2229,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileEl.click(); }
     });
     fileEl.addEventListener('change', () => { if (fileEl.files && fileEl.files[0]) handleFile(fileEl.files[0]); });
+    cameraEl.addEventListener('change', () => { if (cameraEl.files && cameraEl.files[0]) handleFile(cameraEl.files[0]); });
+    // Phone buttons: the camera input opens the rear camera, the plain one the photo library.
+    document.getElementById('rcptCameraBtn').addEventListener('click', (e) => { e.stopPropagation(); cameraEl.click(); });
+    document.getElementById('rcptLibraryBtn').addEventListener('click', (e) => { e.stopPropagation(); fileEl.click(); });
 
     ['dragenter', 'dragover'].forEach(ev =>
       dropEl.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('dragover'); }));
@@ -4219,10 +2246,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     });
 
     // Paste a screenshot — only when the Net Worth tab is showing, so we
-    // don't hijack pastes into Nova's composer or other inputs.
+    // don't hijack pastes into other inputs.
     document.addEventListener('paste', (e) => {
-      const netSection = document.querySelector('.section[data-section="net"]');
-      if (!netSection || netSection.hasAttribute('hidden')) return;
+      const budgetSection = document.querySelector('.section[data-section="budget"]');
+      if (!budgetSection || budgetSection.hasAttribute('hidden')) return;
       const items = (e.clipboardData && e.clipboardData.items) || [];
       for (const it of items) {
         if (it.type && it.type.indexOf('image') === 0) {
@@ -4234,7 +2261,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
     totalEl.addEventListener('input', refreshHint);
     merchantEl.addEventListener('input', refreshHint);
-    currencyEl2.addEventListener('change', refreshHint);
+    window.addEventListener('budget:changed', () => {
+      if (!confirmEl.classList.contains('hidden') && receiptKind !== 'balance') { renderLines(); refreshHint(); }
+    });
     accountEl.addEventListener('change', refreshHint);
     applyBtn.addEventListener('click', apply);
     discardBtn.addEventListener('click', reset);
@@ -4243,13 +2272,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 })();
 </script>
 
+<script src="budget.js"></script>
+<script src="chart-kit.js"></script>
+<script src="charts.js"></script>
+<script src="coach.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'finance',
-    syncedKeys: ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
-    syncedPrefixes: ['nw:'],
+    syncedKeys: ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw:activity', 'nw:history'],
+    syncedPrefixes: ['nw:', 'budget:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }

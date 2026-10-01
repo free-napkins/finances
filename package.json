@@ -8,6 +8,7 @@
     "build": "node -e \"console.log('Static Finance app: no build step required')\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.130.0",
     "@supabase/supabase-js": "^2.45.4"
   }
 }

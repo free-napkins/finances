@@ -1,6 +1,7 @@
 (function () {
-  const KEYS = ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history']
-  const PREFIXES = ['nw:']
+  // subs/bills/wishlist/orders have no UI any more but stay synced so their data isn't dropped.
+  const KEYS = ['subs', 'bills', 'wishlist', 'incoming_orders', 'nw:activity', 'nw:history']
+  const PREFIXES = ['nw:', 'budget:']
   let lastPayload = ''
 
   function readState() {
@@ -29,7 +30,10 @@
     const userId = data.session.user.id
     const loaded = await client.from('finance_state').select('data').eq('user_id', userId).maybeSingle()
     if (loaded.data && loaded.data.data) {
-      Object.entries(loaded.data.data).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)))
+      // Older saved states are in CHF; usd-migration.js converts them first.
+      const remote = window.__financeUSD ? await window.__financeUSD.toUSD(loaded.data.data) : loaded.data.data
+      Object.entries(remote).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)))
+      if (window.__finance) window.__finance.renderAllNetWorth()
       window.dispatchEvent(new Event('storage'))
     }
     async function push() {
