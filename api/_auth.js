@@ -2,8 +2,9 @@ import { createClient } from '@supabase/supabase-js'
 import { sendJson } from './_claude.js'
 
 // Gate for the AI routes: they spend the Anthropic key, so only a signed-in
-// Supabase user may call them. The browser sends the session's access token
-// as "Authorization: Bearer <token>" and Supabase confirms it here.
+// boxofjelly.xyz account that passed 2FA may call them. The browser sends the
+// session's access token as "Authorization: Bearer <token>"; Supabase confirms
+// it here, then the token's "aal" claim must be aal2 (password + authenticator).
 // Set ALLOWED_USER_EMAILS (comma separated) to limit them to specific accounts.
 
 let supabase = null
@@ -13,6 +14,10 @@ function getSupabase() {
   if (!url || !anonKey) return null
   if (!supabase) supabase = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
   return supabase
+}
+
+function claimsOf(token) {
+  try { return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8')) } catch (_) { return {} }
 }
 
 // Running on your own machine (npm run dev / a local server), not a Vercel deployment.
@@ -38,6 +43,11 @@ export async function requireUser(req, res) {
   const { data, error } = await client.auth.getUser(token)
   if (error || !data || !data.user) {
     sendJson(res, 401, { error: 'Your sign-in has expired. Sign in again to use the AI features.' })
+    return null
+  }
+  // Supabase just validated this token, so its claims can be trusted.
+  if (claimsOf(token).aal !== 'aal2') {
+    sendJson(res, 401, { error: 'Finish signing in with your authenticator app to use the AI features.' })
     return null
   }
 

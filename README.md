@@ -4,10 +4,15 @@ Static Vercel finance dashboard with Supabase authentication and per-user state 
 
 ## Setup
 
-1. Run `supabase/schema.sql` in the Supabase SQL editor.
+Sign-in uses the shared Box of Jelly account at `accounts.boxofjelly.xyz` (see the `accounts` repo). The app runs at `finances.boxofjelly.xyz`.
+
+1. Run `macros/supabase/accounts-01-usernames-and-sync.sql` on the Supabase project (it creates `finance_kv`, the per-key sync table this app uses).
 2. Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel.
 3. Configure `ANTHROPIC_API_KEY` in Vercel. It powers receipt scanning (`api/receipt.js`, which sorts items into budget categories) and the budget coach (`api/insights.js`).
-4. The AI routes only answer signed-in Supabase users (`api/_auth.js`). Set `ALLOWED_USER_EMAILS` (comma separated) to limit them to your own account(s). Locally, with no Supabase settings, they're open for testing.
+4. The AI routes only answer signed-in accounts that passed 2FA (`api/_auth.js`). Set `ALLOWED_USER_EMAILS` (comma separated) to limit them to your own account(s). Locally, with no Supabase settings, they're open for testing and the app runs offline.
+
+- `auth.js` + `boxauth.js`: redirect to the accounts site when signed out (clearing this browser's copy of the data), the account button, and the shared `.boxofjelly.xyz` session cookie.
+- `sync.js`: per-key sync with `finance_kv`, live updates over Realtime, merge on a device's first sync.
 
 ## Tabs
 
