@@ -121,15 +121,15 @@
       build(d) {
         return { kind: 'categorical', totalLabel: 'Saved', items: d.goals.map(g => ({ label: (g.icon ? g.icon + ' ' : '') + g.name, value: Number(g.saved) || 0, target: Number(g.target) || 0 })) };
       } },
-    { id: 'methods', name: 'By card & cash', type: 'pie', sub: m => 'How you paid in ' + monthName(m, { month: 'long' }),
+    { id: 'methods', name: 'By account', type: 'pie', sub: m => 'Which Worth accounts paid for ' + monthName(m, { month: 'long' }),
       build(d, m) {
-        const by = {};
-        d.tx.filter(t => monthOf(t.date) === m).forEach(t => { by[t.methodId || ''] = (by[t.methodId || ''] || 0) + t.amount; });
-        const icon = { cash: '💵', debit: '💳', credit: '💳' };
-        return { kind: 'categorical', totalLabel: 'Spent', items: Object.entries(by).map(([id, v]) => {
-          const mm = d.methods.find(x => x.id === id);
-          return { label: mm ? (icon[mm.type] || '💳') + ' ' + mm.name : 'Not set', value: v };
-        }).sort((a, b) => b.value - a.value) };
+        const by = {}, label = {};
+        d.tx.filter(t => monthOf(t.date) === m).forEach(t => {
+          const key = d.txAccount(t) || ('~' + d.txPaidWith(t));
+          by[key] = (by[key] || 0) + t.amount;
+          label[key] = d.txPaidWith(t);
+        });
+        return { kind: 'categorical', totalLabel: 'Spent', items: Object.entries(by).map(([k, v]) => ({ label: label[k], value: v })).sort((a, b) => b.value - a.value) };
       } },
     { id: 'weekday', name: 'By day of week', type: 'bar', sub: () => 'Average spending per weekday, last 90 days',
       build(d) {

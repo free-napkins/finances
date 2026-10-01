@@ -253,6 +253,7 @@ body::after {
 .rcpt-btn-apply:hover { filter: brightness(1.08); color: #07140d; }
 .rcpt-btn-apply:disabled { opacity: 0.45; cursor: default; filter: none; }
 .rcpt-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; }
+.rcpt-hint.error { color: #FF8A8A; font-size: 12px; }
 .hidden { display: none !important; }
 @media (max-width: 520px) {
   .rcpt-fields { grid-template-columns: 1fr; }
@@ -920,12 +921,16 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
             <label for="rcptMerchant">Merchant</label>
             <input type="text" id="rcptMerchant" placeholder="Merchant" />
           </div>
-          <div class="rcpt-field full">
+          <div class="rcpt-field">
             <label for="rcptTotal">Total ($)</label>
             <input type="text" inputmode="decimal" id="rcptTotal" class="mono" placeholder="0.00" />
           </div>
+          <div class="rcpt-field">
+            <label for="rcptDate">Date</label>
+            <input type="date" id="rcptDate" />
+          </div>
           <div class="rcpt-field full">
-            <label for="rcptAccount">Paid with</label>
+            <label for="rcptAccount">Paid from</label>
             <select id="rcptAccount"></select>
           </div>
         </div>
@@ -944,7 +949,7 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       <div class="bg-card-title">🧾 Transactions</div>
       <div class="bg-filters">
         <select id="bgFilterCat" aria-label="Filter by category"></select>
-        <select id="bgFilterMethod" aria-label="Filter by card or cash"></select>
+        <select id="bgFilterAccount" aria-label="Filter by account"></select>
       </div>
     </div>
     <div id="bgTxList"></div>
@@ -959,7 +964,7 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       <input type="date" id="bgTxDate" aria-label="Date" />
       <input type="text" id="bgTxMerchant" placeholder="Where / what" aria-label="Merchant or description" />
       <select id="bgTxCategory" aria-label="Category"></select>
-      <select id="bgTxMethod" aria-label="Paid with"></select>
+      <select id="bgTxAccount" aria-label="Paid from account" title="The Worth account this comes out of"></select>
       <input type="number" id="bgTxAmount" min="0" step="0.01" placeholder="$ amount" aria-label="Amount in dollars" />
       <button type="button" class="bg-btn bg-btn-primary" id="bgTxAdd">+ Add</button>
     </div>
@@ -978,24 +983,6 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       <input type="number" id="bgCatBudget" min="0" step="1" placeholder="$ monthly budget" aria-label="Monthly budget in dollars" />
       <label class="bg-check" title="Fixed costs like rent are judged per month, not per week, in your weekly score"><input type="checkbox" id="bgCatFixed" /> Fixed</label>
       <button type="button" class="bg-btn bg-btn-primary" id="bgCatAdd">+ Add</button>
-    </div>
-  </div>
-
-  <div class="card bg-card">
-    <div class="bg-card-head">
-      <div class="bg-card-title">💳 Cards &amp; cash</div>
-      <div class="bg-card-sub">Link one to an account to deduct purchases automatically</div>
-    </div>
-    <div id="bgMethodList"></div>
-    <div class="bg-form bg-method-form">
-      <input type="text" id="bgMethodName" placeholder="Name (e.g. Visa ••4821)" aria-label="Card name" />
-      <select id="bgMethodType" aria-label="Type">
-        <option value="debit">Debit card</option>
-        <option value="credit">Credit card</option>
-        <option value="cash">Cash</option>
-      </select>
-      <select id="bgMethodAccount" aria-label="Linked account"></select>
-      <button type="button" class="bg-btn bg-btn-primary" id="bgMethodAdd">+ Add</button>
     </div>
   </div>
 </div>
@@ -1897,6 +1884,7 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
     const confThumb  = document.getElementById('rcptConfirmThumb');
     const merchantEl = document.getElementById('rcptMerchant');
     const totalEl    = document.getElementById('rcptTotal');
+    const dateEl     = document.getElementById('rcptDate');
     const accountEl  = document.getElementById('rcptAccount');
     const itemsEl    = document.getElementById('rcptItems');
     const hintEl     = document.getElementById('rcptHint');
@@ -1909,6 +1897,9 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
     // 'balance' = the image shows a current account balance (set the account to
     // it); anything else (expense / receipt) = deduct it. Driven by api/receipt.js.
     let receiptKind  = '';
+    // The total is filled in from the item prices when the receipt's own total wasn't readable.
+    let totalFromItems = false;
+    let dateNote = '';
     // Editable receipt lines: { name, amount, categoryId }
     let receiptLines = [];
     const budget = () => window.__budget;
@@ -1923,6 +1914,10 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       receiptDate = '';
       receiptKind = '';
       receiptLines = [];
+      totalFromItems = false;
+      dateNote = '';
+      dateEl.value = '';
+      hintEl.classList.remove('error');
     }
     function showError(msg) {
       hide(busyEl); hide(confirmEl); show(dropEl);
@@ -1964,16 +1959,12 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
     function fillAccounts(isBalance, merchantName, paymentHint) {
       accountEl.innerHTML = '';
       if (!isBalance && budget()) {
-        budget().methods().forEach(m => {
-          const o = document.createElement('option');
-          o.value = 'method::' + m.id;
-          o.textContent = budget().methodLabel(m);
-          accountEl.appendChild(o);
-        });
-        const matched = budget().matchMethod(paymentHint);
-        if (matched) accountEl.value = 'method::' + matched;
-        accountEl.disabled = !accountEl.options.length;
-        return !accountEl.disabled;
+        // Expenses come out of one of your Worth accounts (or "Other" to just track it).
+        const pick = budget().matchAccount(paymentHint);
+        accountEl.innerHTML = budget().payOptions(pick);
+        accountEl.value = pick;
+        accountEl.disabled = false;
+        return true;
       }
       const accounts = listAllNwAccounts();
       // A balance can populate a brand-new account, so offer that even when the
@@ -2041,9 +2032,10 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
         row.querySelector('.rcpt-line-name').addEventListener('input', e => { receiptLines[i].name = e.target.value; });
         row.querySelector('.rcpt-line-amt').addEventListener('input', e => {
           receiptLines[i].amount = parseFloat(String(e.target.value).replace(/[^0-9.\-]/g, '')) || 0;
+          syncTotalFromItems();
           refreshHint();
         });
-        row.querySelector('.rcpt-line-x').addEventListener('click', () => { receiptLines.splice(i, 1); renderLines(); refreshHint(); });
+        row.querySelector('.rcpt-line-x').addEventListener('click', () => { receiptLines.splice(i, 1); syncTotalFromItems(); renderLines(); refreshHint(); });
       });
       itemsEl.querySelector('.rcpt-line-add').addEventListener('click', () => {
         receiptLines.push({ name: merchantEl.value.trim() || 'Item', amount: 0, categoryId: cats[0] ? cats[0].id : '' });
@@ -2052,12 +2044,26 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       show(itemsEl);
     }
 
+    function syncTotalFromItems() {
+      if (!totalFromItems) return;
+      const sum = receiptLines.reduce((acc, l) => acc + (Number(l.amount) || 0), 0);
+      totalEl.value = sum > 0 ? sum.toFixed(2) : '';
+    }
+    // A receipt date in the future or over two months old is almost always a misread.
+    function plausibleDate(iso) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+      const d = new Date(iso + 'T00:00'), today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const days = (today - d) / 86400000;
+      return !isNaN(d) && days >= 0 && days <= 62;
+    }
     function refreshHint() {
       const total = parseTotal();
-      const datePart = receiptDate ? ('Dated ' + receiptDate + ' · ') : '';
+      const datePart = dateNote ? dateNote + ' · ' : '';
+      hintEl.classList.remove('error');
+      applyBtn.disabled = false;
       if (!(total > 0)) {
-        hintEl.textContent = receiptDate ? ('Dated ' + receiptDate) : '';
-        applyBtn.disabled = true;
+        hintEl.textContent = receiptKind === 'balance' ? 'Enter the balance shown.' : 'Enter the receipt total, or the item prices below.';
         return;
       }
       const totalUSD = total;
@@ -2077,13 +2083,11 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
           const c = cats.find(x => x.id === g.categoryId);
           return (c ? (c.icon ? c.icon + ' ' : '') + c.name : 'Uncategorized') + ' ' + fmtMoney(g.amount);
         });
-        const method = budget().methods().find(m => 'method::' + m.id === accountEl.value);
-        const account = method && method.account ? ' · deducts from ' + method.account.split('::')[1] : '';
+        const account = accountEl.value ? ' · deducts from ' + accountEl.value.split('::').slice(1).join('::') : ' · not deducted from an account';
         const lineSum = receiptLines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
         const note = receiptLines.length && Math.abs(lineSum - total) > 0.009
           ? ' · items add to ' + lineSum.toFixed(2) + ', the difference (tax/discounts) is spread across them' : '';
-        hintEl.textContent = datePart + (split.length ? split.join(' · ') : 'Add at least one line') + account + note;
-        applyBtn.disabled = accountEl.disabled || !split.length;
+        hintEl.textContent = datePart + (split.length ? split.join(' · ') : 'Add at least one line with a price') + account + note;
         return;
       } else {
         hintEl.textContent = datePart + 'Deducts ' + fmtMoney(totalUSD) + ' from your net worth.';
@@ -2109,6 +2113,9 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       const total = Number(receipt.amount != null ? receipt.amount : receipt.total) || 0;
       totalEl.value = total ? String(total) : '';
       receiptDate = String(receipt.date || '').trim();
+      const todayIso = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      dateEl.value = plausibleDate(receiptDate) ? receiptDate : todayIso;
+      dateNote = receiptDate && !plausibleDate(receiptDate) ? 'Receipt date read as ' + receiptDate + ', so it\'s set to today. Change it if that\'s wrong' : '';
 
       const isBalance = receiptKind === 'balance';
       if (accountLabel) accountLabel.textContent = isBalance ? 'Set balance of' : 'Paid with';
@@ -2125,6 +2132,9 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       if (!isBalance && !receiptLines.length) {
         receiptLines = [{ name: merchantEl.value.trim() || 'Purchase', amount: total, categoryId: budget() ? budget().guessCategory(merchantEl.value) : '' }];
       }
+      // No readable total: use the item prices (and keep it in step as you edit them).
+      totalFromItems = !isBalance && !(total > 0);
+      syncTotalFromItems();
       renderLines();
 
       refreshHint();
@@ -2161,10 +2171,14 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       }
     }
 
+    function blockApply(msg, focusEl) {
+      hintEl.textContent = msg;
+      hintEl.classList.add('error');
+      if (focusEl) focusEl.focus();
+    }
     function apply() {
-      if (applyBtn.disabled) return;
       const total = parseTotal();
-      if (!(total > 0)) { refreshHint(); return; }
+      if (!(total > 0)) return blockApply(receiptKind === 'balance' ? 'Enter the balance before applying.' : 'Enter the receipt total (or item prices) before logging.', totalEl);
       const totalUSD = total;
       const isBalance = receiptKind === 'balance';
 
@@ -2182,13 +2196,13 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 
       // Expense receipt: record categorized budget transactions.
       if (!isBalance && budget()) {
-        const methodId = accountEl.value.startsWith('method::') ? accountEl.value.slice(8) : '';
         const lines = receiptSplit();
-        if (!lines.length) { refreshHint(); return; }
+        if (!lines.length) return blockApply('Add at least one item with a price.');
+        if (!dateEl.value) return blockApply('Pick the date of this purchase.', dateEl);
         const result = budget().recordReceipt({
           merchant: merchantEl.value.trim() || 'Receipt',
-          date: receiptDate,
-          methodId,
+          date: dateEl.value,
+          accountRef: accountEl.value,
           lines
         });
         if (result && result.error) { showError(result.error); return; }
@@ -2259,7 +2273,8 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
       }
     });
 
-    totalEl.addEventListener('input', refreshHint);
+    totalEl.addEventListener('input', () => { totalFromItems = false; refreshHint(); });
+    dateEl.addEventListener('change', () => { dateNote = ''; refreshHint(); });
     merchantEl.addEventListener('input', refreshHint);
     window.addEventListener('budget:changed', () => {
       if (!confirmEl.classList.contains('hidden') && receiptKind !== 'balance') { renderLines(); refreshHint(); }

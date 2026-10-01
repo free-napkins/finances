@@ -81,9 +81,9 @@
         };
       }),
       spent_yesterday: round2(sum(d.tx.filter(t => t.date === addDays(today, -1)), t => t.amount)),
-      payment_methods: d.methods.map(m => {
-        const mine = recent.filter(t => t.methodId === m.id);
-        return { name: m.name, type: m.type, spent_90_days: round2(sum(mine, t => t.amount)), transactions: mine.length };
+      paid_from_accounts: d.accounts.map(a => {
+        const mine = recent.filter(t => d.txAccount(t) === a.ref);
+        return { account: a.name, kind: a.cat, balance: round2(a.balance), spent_90_days: round2(sum(mine, t => t.amount)), transactions: mine.length };
       }),
       income: {
         last_30_days_total: round2(sum(inc30, e => e.amount)),

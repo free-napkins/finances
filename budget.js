@@ -1,7 +1,7 @@
 // ============================================================
 // BUDGET · PAYDAY · WEEKLY SCORE
 // Monthly budget categories (like a spreadsheet budget), categorized
-// receipts and transactions per card/cash, daily pay with suggested
+// receipts and transactions paid from your Worth accounts, daily pay with suggested
 // savings splits (auto-set from each goal's complete-by date), and a
 // Monday–Sunday score game. The AI coach lives in coach.js.
 //
@@ -16,7 +16,7 @@
   const K = {
     cats: 'budget:categories',
     tx: 'budget:transactions',
-    methods: 'budget:methods',
+    methods: 'budget:methods', // legacy cards & cash; only read to label old transactions
     income: 'budget:income',
     goals: 'budget:goals',
     scores: 'budget:scores',
@@ -78,13 +78,6 @@
         ['👕', 'Clothing'], ['🧴', 'Personal care'], ['🎬', 'Entertainment'], ['📦', 'Other']
       ].map(([icon, name, fixed]) => ({ id: uid('c_'), icon, name, budget: 0, fixed: !!fixed })));
     }
-    if (!storeGet(K.methods)) {
-      const bank = F.listAllNwAccounts().find(a => a.catKey === 'bank');
-      storeSet(K.methods, [
-        { id: uid('m_'), name: 'Cash', type: 'cash', account: '' },
-        { id: uid('m_'), name: 'Debit card', type: 'debit', account: bank ? 'bank::' + bank.itemName : '' }
-      ]);
-    }
   }
 
   // ---------- net-worth accounts ("cat::name" refs, same as subs/bills) ----------
@@ -141,35 +134,53 @@
     return other ? other.id : (cats[0] ? cats[0].id : '');
   }
 
-  // ---------- payment methods ----------
-  const METHOD_ICONS = { cash: '💵', debit: '💳', credit: '💳' };
-  const methodLabel = m => (METHOD_ICONS[m.type] || '💳') + ' ' + m.name + (m.account ? ' → ' + accountName(m.account) : '');
-  function methodOptions(selected, withAll) {
-    return (withAll ? '<option value="">All cards &amp; cash</option>' : '') + getMethods().map(m =>
-      '<option value="' + esc(m.id) + '"' + (m.id === selected ? ' selected' : '') + '>' + esc((METHOD_ICONS[m.type] || '💳') + ' ' + m.name) + '</option>').join('');
+  // ---------- paying from Worth accounts ----------
+  // Every expense can be paid from (and deducted from) one of the accounts on
+  // the Worth tab. Transactions keep the account as "cat::name".
+  function payAccounts() {
+    return F.listAllNwAccounts().map(a => ({ ref: a.catKey + '::' + a.itemName, name: a.itemName, cat: a.catKey, balance: a.amountUSD }));
   }
-  // Match a receipt's printed payment line ("VISA ****4821", "CASH") to a saved method.
-  function matchMethod(hint) {
+  const accountLabel = ref => { const cat = String(ref || '').split('::')[0]; return (ACCT_ICONS[cat] || '💼') + ' ' + accountName(ref); };
+  // Which account a transaction was paid from (older ones were logged against a card that may have been linked).
+  function txAccount(t) {
+    if (t.accountRef) return t.accountRef;
+    const m = t.methodId && getMethods().find(x => x.id === t.methodId);
+    return (m && m.account) || '';
+  }
+  function txPaidWith(t) {
+    if (t.accountRef) return accountLabel(t.accountRef);
+    const m = t.methodId && getMethods().find(x => x.id === t.methodId);
+    return m ? '💳 ' + m.name : 'No account';
+  }
+  function payOptions(selected, withAll) {
+    const accts = payAccounts();
+    if (withAll) return '<option value="">All accounts</option>' + accts.map(a => '<option value="' + esc(a.ref) + '"' + (a.ref === selected ? ' selected' : '') + '>' + esc(accountLabel(a.ref)) + '</option>').join('');
+    return accts.map(a => '<option value="' + esc(a.ref) + '"' + (a.ref === selected ? ' selected' : '') + '>' + esc(accountLabel(a.ref) + ' · ' + money(a.balance)) + '</option>').join('')
+      + '<option value=""' + (selected === '' ? ' selected' : '') + '>' + (accts.length ? 'Other (don\'t deduct)' : 'No accounts yet. Add one on the Worth tab') + '</option>';
+  }
+  // Pick the account a receipt was most likely paid from: an account whose name
+  // has the card's last 4 digits or brand, "cash", else the last one you used.
+  function matchAccount(hint) {
+    const accts = payAccounts();
+    if (!accts.length) return '';
     const h = String(hint || '').toLowerCase();
-    if (!h) return '';
-    const methods = getMethods();
+    const named = re => accts.find(a => re.test(a.name.toLowerCase()));
     const digits = (h.match(/\d{4}/g) || []).pop();
-    if (digits) { const m = methods.find(x => x.name.includes(digits)); if (m) return m.id; }
-    if (/cash/.test(h)) { const m = methods.find(x => x.type === 'cash'); if (m) return m.id; }
-    const brand = (h.match(/visa|mastercard|master card|amex|american express|discover|debit|credit/) || [])[0];
-    if (brand) {
-      const b = brand.replace(' ', '');
-      const m = methods.find(x => x.name.toLowerCase().replace(' ', '').includes(b)) || methods.find(x => x.type === (brand === 'debit' ? 'debit' : 'credit'));
-      if (m) return m.id;
-    }
-    return '';
+    let hit = digits && accts.find(a => a.name.includes(digits));
+    if (!hit && /cash/.test(h)) hit = named(/cash/);
+    const brand = (h.match(/visa|mastercard|master card|amex|american express|discover|chase|capital one|wells|citi/) || [])[0];
+    if (!hit && brand) hit = named(new RegExp(brand.replace(' ', '\\s*')));
+    if (hit) return hit.ref;
+    const last = getPrefs().lastAccount;
+    if (last !== undefined && (last === '' || accts.some(a => a.ref === last))) return last;
+    const bank = accts.find(a => a.cat === 'bank');
+    return (bank || accts[0]).ref;
   }
 
   // ---------- transactions ----------
-  // Records spending. When the card/cash is linked to an account, the total
-  // is deducted once and each transaction remembers it so deletes refund.
-  function recordTransactions({ date, merchant, methodId, lines, receipt }) {
-    const method = getMethods().find(m => m.id === methodId);
+  // Records spending paid from a Worth account: the total is deducted from it
+  // once and each transaction remembers it, so deleting one refunds it.
+  function recordTransactions({ date, merchant, accountRef, lines, receipt }) {
     const day = validISO(date) ? date : todayISO();
     const receiptId = receipt ? uid('r_') : null;
     const created = lines.map(l => ({
@@ -178,7 +189,7 @@
       merchant,
       categoryId: l.categoryId || '',
       amount: round2(l.amount),
-      methodId: methodId || '',
+      accountRef: accountRef || '',
       items: l.items || [],
       receiptId,
       createdAt: Date.now(),
@@ -186,13 +197,17 @@
     })).filter(t => t.amount > 0);
     if (!created.length) return { error: 'Nothing to record.' };
     const total = created.reduce((s, t) => s + t.amount, 0);
-    if (method && method.account && adjustAccount(method.account, -total, merchant)) {
-      created.forEach(t => { t.deductedFrom = method.account; });
+    const deducted = accountRef && adjustAccount(accountRef, -total, merchant);
+    if (deducted) {
+      created.forEach(t => { t.deductedFrom = accountRef; });
       F.renderAllNetWorth();
     }
-    save(K.tx, getTx().concat(created));
-    const catNames = [...new Set(created.map(t => { const c = getCats().find(x => x.id === t.categoryId); return c ? c.name : 'Uncategorized'; }))];
-    toast('Logged ' + money(total) + ' · ' + catNames.join(', '));
+    storeSet(K.prefs, { ...getPrefs(), lastAccount: accountRef || '' });
+    storeSet(K.tx, getTx().concat(created));
+    // Show the month it landed in, so it's never logged out of sight.
+    if (monthOf(day) !== state.month) { state.month = monthOf(day); window.dispatchEvent(new Event('budget:month')); }
+    save(K.tx, getTx());
+    toast('Logged ' + money(total) + (deducted ? ' from ' + accountName(accountRef) : '') + (day !== todayISO() ? ' on ' + shortDate(day) : ''));
     return { ok: true };
   }
   function deleteTransaction(id) {
@@ -206,7 +221,7 @@
   const goalDone = g => Number(g.target) > 0 && Number(g.saved) >= Number(g.target) - 0.005;
 
   // ---------- month math ----------
-  const state = { month: monthOf(todayISO()), filterCat: '', filterMethod: '' };
+  const state = { month: monthOf(todayISO()), filterCat: '', filterAccount: '' };
   function spentBy(txs) {
     const out = {};
     txs.forEach(t => { out[t.categoryId] = (out[t.categoryId] || 0) + t.amount; });
@@ -324,10 +339,10 @@
   }
 
   function renderTransactions() {
-    const cats = getCats(), methods = getMethods();
+    const cats = getCats();
     const list = $('bgTxList');
     const txs = txInMonth(state.month)
-      .filter(t => (!state.filterCat || t.categoryId === state.filterCat) && (!state.filterMethod || t.methodId === state.filterMethod))
+      .filter(t => (!state.filterCat || t.categoryId === state.filterCat) && (!state.filterAccount || txAccount(t) === state.filterAccount))
       .sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt));
     if (!txs.length) {
       list.innerHTML = '<div class="bg-empty">' + (getTx().length ? 'No transactions match for ' + esc(monthLabel(state.month)) + '.' : 'Scan a receipt or log an expense above. Each one lands in a category and counts against its budget.') + '</div>';
@@ -338,14 +353,13 @@
     list.innerHTML = '<div class="bg-card-sub" style="margin:-4px 4px 4px">' + txs.length + ' transactions · ' + esc(money(total)) + '</div>' + txs.map(t => {
       const head = t.date !== lastDate ? '<div class="bg-day-head">' + esc(parseISO(t.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + '</div>' : '';
       lastDate = t.date;
-      const m = methods.find(x => x.id === t.methodId);
       const itemsText = t.items && t.items.length ? t.items.slice(0, 4).join(', ') + (t.items.length > 4 ? ' +' + (t.items.length - 4) : '') : '';
       const known = cats.some(c => c.id === t.categoryId);
       return head + '<div class="bg-row" data-id="' + esc(t.id) + '">'
         + '<div class="bg-row-date">' + (t.receiptId ? '🧾' : '✍️') + '</div>'
         + '<div class="bg-row-main"><div class="bg-row-title" title="' + esc(itemsText) + '">' + esc(t.merchant) + (itemsText ? ' <span class="bg-muted" style="font-weight:400">· ' + esc(itemsText) + '</span>' : '') + '</div>'
         + '<div class="bg-row-meta"><select class="bg-mini tx-cat" aria-label="Category">' + (known ? '' : '<option value="" selected>❔ Uncategorized</option>') + catOptions(t.categoryId) + '</select>'
-        + '<span>' + esc(m ? (METHOD_ICONS[m.type] || '💳') + ' ' + m.name : 'No card set') + '</span></div></div>'
+        + '<span>' + esc(txPaidWith(t)) + '</span></div></div>'
         + '<div class="bg-row-amt">' + esc(money(t.amount)) + '</div>'
         + '<button type="button" class="bg-x" aria-label="Delete transaction">×</button></div>';
     }).join('');
@@ -361,44 +375,17 @@
     });
   }
 
-  function renderMethods() {
-    const list = $('bgMethodList');
-    const methods = getMethods();
-    const monthTx = txInMonth(monthOf(todayISO()));
-    if (!methods.length) { list.innerHTML = '<div class="bg-empty">Add the cards you use and cash.</div>'; }
-    else {
-      list.innerHTML = methods.map(m => {
-        const used = monthTx.filter(t => t.methodId === m.id).reduce((s, t) => s + t.amount, 0);
-        return '<div class="bg-row bg-method-row" data-id="' + esc(m.id) + '">'
-          + '<div class="bg-method-icon">' + (METHOD_ICONS[m.type] || '💳') + '</div>'
-          + '<div class="bg-row-main"><div class="bg-row-title">' + esc(m.name) + ' <span class="bg-tag">' + esc(m.type) + '</span></div>'
-          + '<div class="bg-row-meta"><select class="bg-mini m-acct" aria-label="Linked account">' + accountOptions(m.account, m.type === 'credit' ? 'Not linked (track only)' : 'Not linked') + '</select></div></div>'
-          + '<div class="bg-row-amt" title="Spent this month">' + esc(money(used)) + '</div>'
-          + '<button type="button" class="bg-x" aria-label="Delete ' + esc(m.name) + '">×</button></div>';
-      }).join('');
-      list.querySelectorAll('.bg-row').forEach(row => {
-        const id = row.dataset.id;
-        row.querySelector('.m-acct').addEventListener('change', e => save(K.methods, getMethods().map(m => m.id === id ? { ...m, account: e.target.value } : m)));
-        row.querySelector('.bg-x').addEventListener('click', () => {
-          const m = getMethods().find(x => x.id === id);
-          if (m && confirm('Remove ' + m.name + '? Past transactions keep their amounts.')) save(K.methods, getMethods().filter(x => x.id !== id));
-        });
-      });
-    }
-    const acctSel = $('bgMethodAccount');
-    const prev = acctSel.value;
-    acctSel.innerHTML = accountOptions(prev, 'Link to account (optional)');
-  }
-
   function renderForms() {
-    const catSel = $('bgTxCategory'), methodSel = $('bgTxMethod');
-    const prevCat = catSel.value, prevMethod = methodSel.value || getPrefs().lastMethod || '';
+    const catSel = $('bgTxCategory'), acctSel = $('bgTxAccount');
+    const prevCat = catSel.value;
+    const prevAcct = acctSel.options.length ? acctSel.value : matchAccount('');
     catSel.innerHTML = catOptions(prevCat);
-    methodSel.innerHTML = methodOptions(prevMethod);
+    acctSel.innerHTML = payOptions(prevAcct);
+    acctSel.value = prevAcct;
     if (!$('bgTxDate').value) $('bgTxDate').value = todayISO();
-    const fc = $('bgFilterCat'), fm = $('bgFilterMethod');
+    const fc = $('bgFilterCat'), fa = $('bgFilterAccount');
     fc.innerHTML = catOptions(state.filterCat, true);
-    fm.innerHTML = methodOptions(state.filterMethod, true);
+    fa.innerHTML = payOptions(state.filterAccount, true);
   }
 
   // ============================================================
@@ -936,7 +923,6 @@
     renderCategories(cats, spent);
     renderForms();
     renderTransactions();
-    renderMethods();
     renderPayday();
     renderScore();
   }
@@ -957,9 +943,7 @@
     hint.classList.remove('error');
     if (!merchant) return fail('Add where or what it was.');
     if (!(amount > 0)) return fail('Enter an amount.');
-    const methodId = $('bgTxMethod').value;
-    storeSet(K.prefs, { ...getPrefs(), lastMethod: methodId });
-    const r = recordTransactions({ date: $('bgTxDate').value, merchant, methodId, lines: [{ categoryId: $('bgTxCategory').value, amount, items: [] }] });
+    const r = recordTransactions({ date: $('bgTxDate').value, merchant, accountRef: $('bgTxAccount').value, lines: [{ categoryId: $('bgTxCategory').value, amount, items: [] }] });
     if (r.error) return fail(r.error);
     $('bgTxMerchant').value = ''; $('bgTxAmount').value = ''; hint.textContent = '';
     $('bgTxMerchant').focus();
@@ -971,13 +955,6 @@
     save(K.cats, getCats().concat({ id: uid('c_'), icon: $('bgCatIcon').value.trim(), name, budget: num($('bgCatBudget').value), fixed: $('bgCatFixed').checked }));
     ['bgCatIcon', 'bgCatName', 'bgCatBudget'].forEach(id => { $(id).value = ''; });
     $('bgCatFixed').checked = false;
-  }
-
-  function addMethod() {
-    const name = $('bgMethodName').value.trim();
-    if (!name) { $('bgMethodName').focus(); return; }
-    save(K.methods, getMethods().concat({ id: uid('m_'), name, type: $('bgMethodType').value, account: $('bgMethodAccount').value }));
-    $('bgMethodName').value = '';
   }
 
   function addGoal() {
@@ -1007,12 +984,11 @@
     $('bgTxCategory').addEventListener('change', () => { $('bgTxCategory').dataset.touched = '1'; });
     $('bgCatAdd').addEventListener('click', addCategory);
     ['bgCatName', 'bgCatBudget'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); }));
-    $('bgMethodAdd').addEventListener('click', addMethod);
     $('bgGoalAdd').addEventListener('click', addGoal);
     // With a complete-by date the coach sets the %, so the field is just informational.
     $('bgGoalDeadline').addEventListener('change', () => { $('bgGoalPercent').disabled = !!$('bgGoalDeadline').value; });
     $('bgFilterCat').addEventListener('change', e => { state.filterCat = e.target.value; renderTransactions(); });
-    $('bgFilterMethod').addEventListener('change', e => { state.filterMethod = e.target.value; renderTransactions(); });
+    $('bgFilterAccount').addEventListener('change', e => { state.filterAccount = e.target.value; renderTransactions(); });
     $('bgPayAmount').addEventListener('input', renderPaySplit);
     $('bgPayDate').addEventListener('change', renderPaySplit);
     $('bgPayAmount').addEventListener('keydown', e => { if (e.key === 'Enter' && $('bgPaySave')) logPay(true); });
@@ -1025,7 +1001,7 @@
 
   seed();
   window.__budget = {
-    data: () => ({ cats: getCats(), tx: getTx(), income: getIncome(), goals: getGoals(), methods: getMethods() }),
+    data: () => ({ cats: getCats(), tx: getTx(), income: getIncome(), goals: getGoals(), accounts: payAccounts(), txAccount, txPaidWith }),
     month: () => state.month,
     toast,
     plan: () => storeGet(K.plan),
@@ -1033,11 +1009,11 @@
     scores: () => storeGet(K.scores) || {},
     setCategoryBudget: (id, amount) => save(K.cats, getCats().map(c => (c.id === id ? { ...c, budget: round2(amount) } : c))),
     categories: getCats,
-    methods: getMethods,
-    methodLabel,
-    matchMethod,
+    accounts: payAccounts,
+    payOptions,
+    matchAccount,
     guessCategory,
-    recordReceipt: ({ merchant, date, methodId, lines }) => recordTransactions({ merchant, date, methodId, lines, receipt: true })
+    recordReceipt: ({ merchant, date, accountRef, lines }) => recordTransactions({ merchant, date, accountRef, lines, receipt: true })
   };
   wire();
   autoPlan();
